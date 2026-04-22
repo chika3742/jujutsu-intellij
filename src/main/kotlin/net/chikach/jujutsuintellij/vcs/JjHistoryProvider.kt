@@ -2,7 +2,6 @@ package net.chikach.jujutsuintellij.vcs
 
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.components.Service
-import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vcs.FilePath
 import com.intellij.openapi.vcs.VcsException
@@ -16,21 +15,27 @@ import com.intellij.openapi.vcs.history.VcsHistorySession
 import com.intellij.openapi.vcs.history.VcsRevisionNumber
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.ui.ColumnInfo
+import net.chikach.jujutsuintellij.cli.HistoryEntryJson
 import net.chikach.jujutsuintellij.cli.JjCli
+import net.chikach.jujutsuintellij.cli.JjJsonCommand
+import net.chikach.jujutsuintellij.cli.JjJsonDecoders
+import net.chikach.jujutsuintellij.cli.template.JjTemplates
+import net.chikach.jujutsuintellij.cli.template.email
+import net.chikach.jujutsuintellij.cli.template.name
+import net.chikach.jujutsuintellij.cli.template.obj
+import net.chikach.jujutsuintellij.cli.template.string
+import net.chikach.jujutsuintellij.cli.template.timestamp
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
 import java.nio.file.Paths
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import javax.swing.JComponent
 
 /**
  * Drives IntelliJ's "Show History" panel from `jj log`.
  *
- * The filter uses the positional `FILESETS` argument so jj shows only commits that actually
- * modified the file, and the template emits machine-readable fields separated by ASCII 0x1f /
- * 0x1e so multiline commit descriptions round-trip safely.
+     * The filter uses the positional `FILESETS` argument so jj shows only commits that actually
+     * modified the file, and the template emits one JSON object per line so multiline descriptions
+     * remain machine-readable without bespoke field separators.
  */
 @Service(Service.Level.PROJECT)
 class JjHistoryProvider(private val project: Project) : VcsHistoryProvider {
@@ -108,8 +113,8 @@ class JjHistoryProvider(private val project: Project) : VcsHistoryProvider {
         filePath: FilePath,
         relative: String,
     ): List<VcsFileRevision> {
-        val result = try {
-            JjCli.getInstance().execute(
+        val records = try {
+            JjJsonCommand.getInstance().executeObjects(
                 JjCli.Request(
                     workDir = Paths.get(repo.rootPath),
                     args = listOf(
@@ -125,59 +130,18 @@ class JjHistoryProvider(private val project: Project) : VcsHistoryProvider {
         } catch (e: Exception) {
             throw VcsException("jj log failed for $relative: ${e.message}", e)
         }
-        if (!result.isSuccess) {
-            throw VcsException("jj log exited ${result.exitCode}: ${result.stderr.trim()}")
-        }
-
-        val out = result.stdout
-        if (out.isEmpty()) return emptyList()
-
-        val revisions = ArrayList<VcsFileRevision>()
-        for (record in out.split(RS)) {
-            if (record.isEmpty()) continue
-            val fields = record.split(FS)
-            if (fields.size < 6) {
-                if (LOG.isDebugEnabled) LOG.debug("Malformed jj log record: $record")
-                continue
-            }
-            val commitId = fields[0]
-            val changeId = fields[1]
-            val authorName = fields[2]
-            val authorEmail = fields[3]
-            val timestamp = fields[4]
-            val description = fields[5]
-
-            val date = parseTimestamp(timestamp) ?: Date(0)
-            val author = when {
-                authorName.isNotBlank() && authorEmail.isNotBlank() -> "$authorName <$authorEmail>"
-                authorName.isNotBlank() -> authorName
-                else -> authorEmail
-            }
-            revisions += JjFileRevision(
+        return JjJsonDecoders.decodeHistoryEntries(records).map { entry ->
+            JjFileRevision(
                 repo = repo,
                 filePath = filePath,
                 relativePath = relative,
-                commitId = commitId,
-                changeId = changeId,
-                author = author,
-                date = date,
-                message = description.trimEnd('\n'),
+                commitId = entry.commitId,
+                changeId = entry.changeId,
+                author = entry.author,
+                date = entry.date,
+                message = entry.description,
             )
         }
-        return revisions
-    }
-
-    private fun parseTimestamp(raw: String): Date? {
-        if (raw.isBlank()) return null
-        for (format in TIMESTAMP_FORMATS) {
-            try {
-                return SimpleDateFormat(format, Locale.ROOT).parse(raw)
-            } catch (_: Exception) {
-                // try next
-            }
-        }
-        if (LOG.isDebugEnabled) LOG.debug("Unparseable jj timestamp: $raw")
-        return null
     }
 
     private class JjHistorySession(
@@ -193,23 +157,16 @@ class JjHistoryProvider(private val project: Project) : VcsHistoryProvider {
     }
 
     companion object {
-        private val LOG = logger<JjHistoryProvider>()
-        private const val FS = ""
-        private const val RS = ""
-
-        /**
-         * Emits one record per commit. Separators are raw ASCII control bytes passed literally
-         * through to jj's template parser, which treats them as ordinary characters inside the
-         * double-quoted string literals.
-         */
         private val HISTORY_TEMPLATE =
-            "commit_id ++ \"$FS\" ++ change_id ++ \"$FS\" ++ author.name() ++ \"$FS\" ++ " +
-                "author.email() ++ \"$FS\" ++ author.timestamp() ++ \"$FS\" ++ description ++ \"$RS\""
-
-        private val TIMESTAMP_FORMATS = listOf(
-            "yyyy-MM-dd HH:mm:ss.SSS XXX",
-            "yyyy-MM-dd HH:mm:ss XXX",
-            "yyyy-MM-dd'T'HH:mm:ssXXX",
-        )
+            JjTemplates.commitJsonLine {
+                obj {
+                    "commitId" to string(commitId)
+                    "changeId" to string(changeId)
+                    "authorName" to string(author.name())
+                    "authorEmail" to string(author.email())
+                    "timestamp" to string(author.timestamp())
+                    "description" to string(description)
+                }
+            }
     }
 }

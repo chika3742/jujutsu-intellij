@@ -17,6 +17,9 @@ repositories {
 
 // Read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin.html
 dependencies {
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
+    testImplementation(kotlin("test"))
+
     intellijPlatform {
         intellijIdea("2025.2.4")
         testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
