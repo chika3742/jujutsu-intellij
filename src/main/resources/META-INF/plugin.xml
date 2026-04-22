@@ -1,0 +1,65 @@
+<!-- Plugin Configuration File: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+    <id>net.chikach.jujutsu-intellij</id>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.vcs</depends>
+
+    <resource-bundle>messages.JujutsuBundle</resource-bundle>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <applicationService serviceImplementation="net.chikach.jujutsuintellij.cli.JjCli"/>
+        <applicationService serviceImplementation="net.chikach.jujutsuintellij.cli.JjVersion"/>
+        <applicationService serviceImplementation="net.chikach.jujutsuintellij.config.JujutsuAppSettings"/>
+        <projectService serviceImplementation="net.chikach.jujutsuintellij.config.JujutsuProjectSettings"/>
+        <projectService serviceImplementation="net.chikach.jujutsuintellij.repo.JjRepositoryManager"/>
+        <projectService serviceImplementation="net.chikach.jujutsuintellij.vcs.JjChangeProvider"/>
+        <projectService serviceImplementation="net.chikach.jujutsuintellij.vcs.JjDiffProvider"/>
+        <projectService serviceImplementation="net.chikach.jujutsuintellij.vcs.JjHistoryProvider"/>
+        <projectService serviceImplementation="net.chikach.jujutsuintellij.vcs.JjAnnotationProvider"/>
+
+        <applicationConfigurable
+                parentId="tools"
+                instance="net.chikach.jujutsuintellij.config.JujutsuConfigurable"
+                id="net.chikach.jujutsu.settings"
+                bundle="messages.JujutsuBundle"
+                key="settings.title"/>
+
+        <notificationGroup id="Jujutsu"
+                           displayType="BALLOON"
+                           bundle="messages.JujutsuBundle"
+                           key="notification.group.name"/>
+
+        <vcs name="Jujutsu"
+             vcsClass="net.chikach.jujutsuintellij.vcs.JujutsuVcs"
+             displayName="Jujutsu"
+             administrativeAreaName=".jj"/>
+        <vcsRootChecker implementation="net.chikach.jujutsuintellij.vcs.JjRootChecker"/>
+        <directoryIndexExcludePolicy implementation="net.chikach.jujutsuintellij.vcs.JjDirectoryIndexExcludePolicy"/>
+        <treeStructureProvider implementation="net.chikach.jujutsuintellij.ui.JjProjectViewProvider"/>
+    </extensions>
+
+    <actions resource-bundle="messages.JujutsuBundle">
+        <group id="Jujutsu.Menu"
+               class="net.chikach.jujutsuintellij.actions.JujutsuMenu"
+               popup="true"
+               searchable="false">
+            <reference ref="Vcs.ShowTabbedFileHistory"/>
+            <reference ref="Annotate"/>
+            <reference ref="Compare.SameVersion"/>
+            <add-to-group group-id="VcsGlobalGroup" anchor="after" relative-to-action="Vcs.Specific"/>
+        </group>
+
+        <group id="Jujutsu.ContextMenu"
+               class="net.chikach.jujutsuintellij.actions.JujutsuMenu"
+               popup="true"
+               searchable="false">
+            <reference ref="Vcs.ShowTabbedFileHistory"/>
+            <reference ref="Annotate"/>
+            <reference ref="Compare.SameVersion"/>
+            <reference ref="ChangesView.Revert"/>
+            <reference ref="ChangesView.RevertFiles"/>
+            <add-to-group group-id="VcsGroup" anchor="last"/>
+        </group>
+    </actions>
+</idea-plugin>
