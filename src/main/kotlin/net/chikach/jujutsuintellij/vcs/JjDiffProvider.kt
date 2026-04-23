@@ -4,10 +4,10 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vcs.FilePath
+import com.intellij.openapi.vcs.changes.ContentRevision
 import com.intellij.openapi.vcs.diff.DiffProvider
 import com.intellij.openapi.vcs.diff.ItemLatestState
 import com.intellij.openapi.vcs.history.VcsRevisionNumber
-import com.intellij.openapi.vcs.changes.ContentRevision
 import com.intellij.openapi.vfs.VirtualFile
 import net.chikach.jujutsuintellij.model.JjRevisionNumber
 import net.chikach.jujutsuintellij.repo.JjRepository

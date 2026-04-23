@@ -50,17 +50,15 @@ class JjCli {
             throw JjCliException("Failed to start jj process: ${e.message}", e)
         }
 
-        val stdinStream = handler.processInput
-        if (stdinStream != null) {
-            try {
+        try {
+            handler.processInput.use { stdinStream ->
                 request.stdin?.let { input ->
                     stdinStream.write(input.toByteArray(StandardCharsets.UTF_8))
                     stdinStream.flush()
                 }
-                stdinStream.close()
-            } catch (e: IOException) {
-                LOG.warn("Failed writing stdin to jj process", e)
             }
+        } catch (e: IOException) {
+            LOG.warn("Failed writing stdin to jj process", e)
         }
 
         val timeoutCapped = request.timeoutMs.coerceIn(1L, Int.MAX_VALUE.toLong()).toInt()

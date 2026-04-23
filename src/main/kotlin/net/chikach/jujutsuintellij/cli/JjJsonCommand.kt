@@ -3,8 +3,6 @@ package net.chikach.jujutsuintellij.cli
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.buildJsonObject
 
 @Service(Service.Level.APP)
 class JjJsonCommand {

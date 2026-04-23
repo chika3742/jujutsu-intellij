@@ -7,12 +7,7 @@ import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vcs.FilePath
 import com.intellij.openapi.vcs.FileStatus
-import com.intellij.openapi.vcs.changes.Change
-import com.intellij.openapi.vcs.changes.ChangeListManagerGate
-import com.intellij.openapi.vcs.changes.ChangeProvider
-import com.intellij.openapi.vcs.changes.ChangelistBuilder
-import com.intellij.openapi.vcs.changes.CurrentContentRevision
-import com.intellij.openapi.vcs.changes.VcsDirtyScope
+import com.intellij.openapi.vcs.changes.*
 import com.intellij.vcsUtil.VcsUtil
 import net.chikach.jujutsuintellij.cli.GitIgnoredScanner
 import net.chikach.jujutsuintellij.cli.JjCli

@@ -9,7 +9,7 @@ import net.chikach.jujutsuintellij.cli.JjCli
 import net.chikach.jujutsuintellij.model.JjRevisionNumber
 import net.chikach.jujutsuintellij.repo.JjRepository
 import java.nio.file.Paths
-import java.util.Date
+import java.util.*
 
 /**
  * A single jj commit as reported by `jj log` for a specific file. Exposes the jj-side metadata

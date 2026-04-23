@@ -11,13 +11,7 @@ import com.intellij.vcsUtil.VcsUtil
 import net.chikach.jujutsuintellij.cli.JjCli
 import net.chikach.jujutsuintellij.cli.JjJsonCommand
 import net.chikach.jujutsuintellij.cli.JjJsonDecoders
-import net.chikach.jujutsuintellij.cli.template.JjTemplates
-import net.chikach.jujutsuintellij.cli.template.email
-import net.chikach.jujutsuintellij.cli.template.name
-import net.chikach.jujutsuintellij.cli.template.num
-import net.chikach.jujutsuintellij.cli.template.obj
-import net.chikach.jujutsuintellij.cli.template.string
-import net.chikach.jujutsuintellij.cli.template.timestamp
+import net.chikach.jujutsuintellij.cli.template.*
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
 import java.nio.file.Paths

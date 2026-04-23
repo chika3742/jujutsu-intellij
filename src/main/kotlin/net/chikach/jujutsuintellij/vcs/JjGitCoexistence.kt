@@ -26,7 +26,7 @@ class JjGitCoexistence : ProjectActivity {
         val vcsManager = ProjectLevelVcsManager.getInstance(project)
         vcsManager.runAfterInitialization { reconcileMappings(project) }
 
-        project.messageBus.connect(project).subscribe(
+        project.messageBus.connect().subscribe(
             ProjectLevelVcsManager.VCS_CONFIGURATION_CHANGED,
             VcsMappingListener { reconcileMappings(project) }
         )
@@ -56,7 +56,7 @@ class JjGitCoexistence : ProjectActivity {
 
             if (updatedMappings == currentMappings) return
 
-            vcsManager.setDirectoryMappings(updatedMappings)
+            vcsManager.directoryMappings = updatedMappings
             notifySuppressed(project, suppressedRoots)
         } finally {
             reconciling.set(false)

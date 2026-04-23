@@ -27,7 +27,7 @@ class JjContentRevision(
         VcsUtil.getFilePath(File(repo.rootPath, normalizedRelative), false)
 
     @Throws(VcsException::class)
-    override fun getContent(): String? {
+    override fun getContent(): String {
         val result = try {
             JjCli.getInstance().execute(
                 JjCli.Request(

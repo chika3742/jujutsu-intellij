@@ -8,7 +8,7 @@ import com.intellij.openapi.vcs.history.VcsFileRevision
 import com.intellij.openapi.vcs.history.VcsRevisionNumber
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.text.DateFormatUtil
-import java.util.Date
+import java.util.*
 
 /**
  * One annotation record — the jj commit that last touched a given source line.
@@ -65,14 +65,14 @@ class JjFileAnnotation(
     override fun getVcsKey() = JujutsuVcs.KEY
 
     private inner class RevisionAspect :
-        LineAnnotationAspectAdapter(LineAnnotationAspect.REVISION, LineAnnotationAspect.REVISION, false) {
+        LineAnnotationAspectAdapter(REVISION, REVISION, false) {
         override fun getValue(line: Int): String = lines.getOrNull(line)?.commitId?.take(8) ?: ""
         override fun getTooltipText(lineNumber: Int): String? = getToolTip(lineNumber)
         override fun showAffectedPaths(lineNum: Int) {}
     }
 
     private inner class DateAspect :
-        LineAnnotationAspectAdapter(LineAnnotationAspect.DATE, LineAnnotationAspect.DATE, true) {
+        LineAnnotationAspectAdapter(DATE, DATE, true) {
         override fun getValue(line: Int): String =
             lines.getOrNull(line)?.let { DateFormatUtil.formatPrettyDate(it.date) } ?: ""
         override fun getTooltipText(lineNumber: Int): String? = getToolTip(lineNumber)
@@ -80,7 +80,7 @@ class JjFileAnnotation(
     }
 
     private inner class AuthorAspect :
-        LineAnnotationAspectAdapter(LineAnnotationAspect.AUTHOR, LineAnnotationAspect.AUTHOR, true) {
+        LineAnnotationAspectAdapter(AUTHOR, AUTHOR, true) {
         override fun getValue(line: Int): String = lines.getOrNull(line)?.authorName ?: ""
         override fun getTooltipText(lineNumber: Int): String? = getToolTip(lineNumber)
         override fun showAffectedPaths(lineNum: Int) {}

@@ -3,8 +3,7 @@ package net.chikach.jujutsuintellij.cli
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.util.*
 
 data class HistoryEntryJson(
     val commitId: String,
