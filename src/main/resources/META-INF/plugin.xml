@@ -37,6 +37,7 @@
         <vcsRootChecker implementation="net.chikach.jujutsuintellij.vcs.JjRootChecker"/>
         <directoryIndexExcludePolicy implementation="net.chikach.jujutsuintellij.vcs.JjDirectoryIndexExcludePolicy"/>
         <treeStructureProvider implementation="net.chikach.jujutsuintellij.ui.JjProjectViewProvider"/>
+        <postStartupActivity implementation="net.chikach.jujutsuintellij.vcs.JjGitCoexistence"/>
     </extensions>
 
     <actions resource-bundle="messages.JujutsuBundle">

@@ -11,8 +11,6 @@ import com.intellij.vcsUtil.VcsUtil
 import net.chikach.jujutsuintellij.cli.JjCli
 import net.chikach.jujutsuintellij.cli.JjJsonCommand
 import net.chikach.jujutsuintellij.cli.JjJsonDecoders
-import net.chikach.jujutsuintellij.repo.JjRepository
-import net.chikach.jujutsuintellij.repo.JjRepositoryManager
 import net.chikach.jujutsuintellij.cli.template.JjTemplates
 import net.chikach.jujutsuintellij.cli.template.email
 import net.chikach.jujutsuintellij.cli.template.name
@@ -20,15 +18,14 @@ import net.chikach.jujutsuintellij.cli.template.num
 import net.chikach.jujutsuintellij.cli.template.obj
 import net.chikach.jujutsuintellij.cli.template.string
 import net.chikach.jujutsuintellij.cli.template.timestamp
+import net.chikach.jujutsuintellij.repo.JjRepository
+import net.chikach.jujutsuintellij.repo.JjRepositoryManager
 import java.nio.file.Paths
 
 /**
- * Drives IntelliJ's "Annotate with Git Blame" equivalent for jj. Annotation is produced by
- * `jj file annotate` against the working copy (`@`) — each line is the commit that last
- * touched it.
- *
- * Parsing uses one JSON object per line. This keeps line-oriented output aligned with jj's own
- * annotation stream while avoiding ad-hoc delimiters inside author names or timestamps.
+ * Drives IntelliJ's "Annotate with Git Blame" equivalent for jj. Annotation output uses the same
+ * JSON-lines pipeline as history so template rendering, parsing, and timestamp decoding stay
+ * centralized instead of drifting across multiple per-provider implementations.
  */
 @Service(Service.Level.PROJECT)
 class JjAnnotationProvider(private val project: Project) : AnnotationProvider {
@@ -110,16 +107,15 @@ class JjAnnotationProvider(private val project: Project) : AnnotationProvider {
     }
 
     companion object {
-        private val TEMPLATE =
-            JjTemplates.annotationJsonLine {
-                obj {
-                    "commitId" to string(commitId)
-                    "changeId" to string(changeId)
-                    "authorName" to string(author.name())
-                    "authorEmail" to string(author.email())
-                    "timestamp" to string(author.timestamp())
-                    "lineNumber" to num(lineNumber)
-                }
+        private val TEMPLATE = JjTemplates.annotationJsonLine {
+            obj {
+                "commitId" to string(commitId)
+                "changeId" to string(changeId)
+                "authorName" to string(author.name())
+                "authorEmail" to string(author.email())
+                "timestamp" to string(author.timestamp())
+                "lineNumber" to num(lineNumber)
             }
+        }
     }
 }

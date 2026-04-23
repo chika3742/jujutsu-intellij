@@ -31,4 +31,24 @@ class JjJsonParsingTest {
             JjJsonParser.parseObjects("\"not-an-object\"", "jj log")
         }
     }
+
+    @Test
+    fun `parses annotation entries`() {
+        val objects = JjJsonParser.parseObjects(
+            """
+            {"commitId":"abc","changeId":"chg1","authorName":"Alice","authorEmail":"alice@example.com","timestamp":"2025-01-02 03:04:05 +00:00","lineNumber":1}
+            {"commitId":"def","changeId":"chg2","authorName":"","authorEmail":"bot@example.com","timestamp":"2025-01-02T03:04:05+00:00","lineNumber":2}
+            """.trimIndent(),
+            "jj file annotate"
+        )
+
+        val entries = JjJsonDecoders.decodeAnnotationEntries(objects)
+
+        assertEquals(2, entries.size)
+        assertEquals("abc", entries[0].commitId)
+        assertEquals("Alice <alice@example.com>", entries[0].author)
+        assertEquals(1, entries[0].lineNumber)
+        assertEquals("bot@example.com", entries[1].author)
+        assertEquals(2, entries[1].lineNumber)
+    }
 }
