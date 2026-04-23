@@ -8,13 +8,11 @@ import com.intellij.openapi.vcs.VcsException
 import com.intellij.openapi.vcs.history.*
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.ui.ColumnInfo
-import net.chikach.jujutsuintellij.cli.JjCli
-import net.chikach.jujutsuintellij.cli.JjJsonCommand
+import net.chikach.jujutsuintellij.cli.JjCommands
 import net.chikach.jujutsuintellij.cli.JjJsonDecoders
 import net.chikach.jujutsuintellij.cli.template.*
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
-import java.nio.file.Paths
 import javax.swing.JComponent
 
 /**
@@ -41,7 +39,7 @@ class JjHistoryProvider(private val project: Project) : VcsHistoryProvider {
 
     override fun createSessionFor(filePath: FilePath): VcsHistorySession? {
         val repo = findRepo(filePath) ?: return null
-        val relative = relativize(repo, filePath.path) ?: return null
+        val relative = repo.relativize(filePath.path) ?: return null
         val revisions = collectHistory(repo, filePath, relative)
         val current = revisions.firstOrNull()?.revisionNumber
         return JjHistorySession(filePath, current, revisions)
@@ -49,7 +47,7 @@ class JjHistoryProvider(private val project: Project) : VcsHistoryProvider {
 
     override fun reportAppendableHistory(path: FilePath, partner: VcsAppendableHistorySessionPartner) {
         val repo = findRepo(path) ?: return
-        val relative = relativize(repo, path.path) ?: return
+        val relative = repo.relativize(path.path) ?: return
 
         val emptySession = JjHistorySession(path, null, emptyList())
         partner.reportCreatedEmptySession(emptySession)
@@ -83,16 +81,8 @@ class JjHistoryProvider(private val project: Project) : VcsHistoryProvider {
         }
         val absolute = filePath.path
         return manager.getAll()
-            .filter { absolute == it.rootPath || absolute.startsWith(if (it.rootPath.endsWith('/')) it.rootPath else it.rootPath + '/') }
+            .filter { it.containsPath(absolute) }
             .maxByOrNull { it.rootPath.length }
-    }
-
-    private fun relativize(repo: JjRepository, absolutePath: String): String? {
-        val rootPath = repo.rootPath
-        if (absolutePath == rootPath) return ""
-        val prefix = if (rootPath.endsWith('/')) rootPath else "$rootPath/"
-        if (!absolutePath.startsWith(prefix)) return null
-        return absolutePath.substring(prefix.length)
     }
 
     private fun collectHistory(
@@ -101,18 +91,10 @@ class JjHistoryProvider(private val project: Project) : VcsHistoryProvider {
         relative: String,
     ): List<VcsFileRevision> {
         val records = try {
-            JjJsonCommand.getInstance().executeObjects(
-                JjCli.Request(
-                    workDir = Paths.get(repo.rootPath),
-                    args = listOf(
-                        "log",
-                        "--no-graph",
-                        "-r", "::@",
-                        "-T", HISTORY_TEMPLATE,
-                        "--",
-                        relative,
-                    ),
-                )
+            JjCommands.getInstance().fileHistory(
+                repo = repo,
+                relativePath = relative,
+                template = HISTORY_TEMPLATE,
             )
         } catch (e: Exception) {
             throw VcsException("jj log failed for $relative: ${e.message}", e)

@@ -8,13 +8,11 @@ import com.intellij.openapi.vcs.annotate.FileAnnotation
 import com.intellij.openapi.vcs.history.VcsFileRevision
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.vcsUtil.VcsUtil
-import net.chikach.jujutsuintellij.cli.JjCli
-import net.chikach.jujutsuintellij.cli.JjJsonCommand
+import net.chikach.jujutsuintellij.cli.JjCommands
 import net.chikach.jujutsuintellij.cli.JjJsonDecoders
 import net.chikach.jujutsuintellij.cli.template.*
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
-import java.nio.file.Paths
 
 /**
  * Drives IntelliJ's "Annotate with Git Blame" equivalent for jj. Annotation output uses the same
@@ -31,24 +29,15 @@ class JjAnnotationProvider(private val project: Project) : AnnotationProvider {
     override fun annotate(file: VirtualFile, revision: VcsFileRevision?): FileAnnotation {
         val repo = JjRepositoryManager.getInstance(project).getRepositoryForFile(file)
             ?: throw VcsException("File is not under a Jujutsu repository: ${file.path}")
-        val relative = relativize(repo, file.path)
+        val relative = repo.relativize(file.path)
             ?: throw VcsException("Cannot compute path for ${file.path} inside ${repo.rootPath}")
 
-        val args = buildList {
-            add("file")
-            add("annotate")
-            add("-T")
-            add(TEMPLATE)
-            if (revision != null) {
-                add("-r")
-                add(revision.revisionNumber.asString())
-            }
-            add(relative)
-        }
-
         val records = try {
-            JjJsonCommand.getInstance().executeObjects(
-                JjCli.Request(workDir = Paths.get(repo.rootPath), args = args)
+            JjCommands.getInstance().annotateFile(
+                repo = repo,
+                relativePath = relative,
+                template = TEMPLATE,
+                revision = revision?.revisionNumber?.asString(),
             )
         } catch (e: Exception) {
             throw VcsException("Failed to run jj file annotate on $relative: ${e.message}", e)
@@ -90,14 +79,6 @@ class JjAnnotationProvider(private val project: Project) : AnnotationProvider {
                 message = "",
             )
         }
-    }
-
-    private fun relativize(repo: JjRepository, absolutePath: String): String? {
-        val rootPath = repo.rootPath
-        if (absolutePath == rootPath) return ""
-        val prefix = if (rootPath.endsWith('/')) rootPath else "$rootPath/"
-        if (!absolutePath.startsWith(prefix)) return null
-        return absolutePath.substring(prefix.length)
     }
 
     companion object {

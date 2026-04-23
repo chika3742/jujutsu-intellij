@@ -5,10 +5,9 @@ import com.intellij.openapi.vcs.RepositoryLocation
 import com.intellij.openapi.vcs.VcsException
 import com.intellij.openapi.vcs.history.VcsFileRevision
 import com.intellij.openapi.vcs.history.VcsRevisionNumber
-import net.chikach.jujutsuintellij.cli.JjCli
+import net.chikach.jujutsuintellij.cli.JjCommands
 import net.chikach.jujutsuintellij.model.JjRevisionNumber
 import net.chikach.jujutsuintellij.repo.JjRepository
-import java.nio.file.Paths
 import java.util.*
 
 /**
@@ -44,12 +43,7 @@ class JjFileRevision(
 
     override fun loadContent(): ByteArray? {
         val result = try {
-            JjCli.getInstance().execute(
-                JjCli.Request(
-                    workDir = Paths.get(repo.rootPath),
-                    args = listOf("file", "show", "-r", commitId, relativePath),
-                )
-            )
+            JjCommands.getInstance().showFile(repo, commitId, relativePath)
         } catch (e: Exception) {
             throw VcsException("Failed to read $relativePath at $commitId: ${e.message}", e)
         }

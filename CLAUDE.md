@@ -32,12 +32,28 @@ Gradle Configuration Cache and Build Cache are both enabled (`gradle.properties`
 ### Key entry points
 
 - `plugin.xml` — declares all extensions, actions, listeners, and dependencies. Every new extension point registration must go here.
-- `MyToolWindowFactory` — registers the tool window (`id="MyToolWindow"`) and constructs its UI content.
-- `MyMessageBundle` — i18n helper wrapping `DynamicBundle`. Add localizable strings to `src/main/resources/messages/MyMessageBundle.properties` and access them via `MyMessageBundle.message("key")`.
+- `JujutsuVcs` — VCS implementation registered as `name="Jujutsu"` in `plugin.xml`.
+- `JjRepositoryManager` / `JjRepository` — project-scoped repository registry plus per-root context helpers.
+- `JjCommands` — app-level facade for repo-aware `jj` operations (`diff`, `log`, `file annotate`, `file show`, `--version`).
+- `JjCli` — low-level synchronous process runner for `jj`; handles executable resolution, environment, timeout, stdin, and captured output.
+- `JujutsuBundle` — i18n helper; add strings to `src/main/resources/messages/JujutsuBundle.properties`.
 
 ### Extension model
 
 New IDE integrations (actions, services, file types, VCS handlers, etc.) are declared in `plugin.xml` under `<extensions defaultExtensionNs="com.intellij">` and implemented as Kotlin classes. The plugin currently depends only on `com.intellij.modules.platform`; add bundled plugin dependencies in `build.gradle.kts` under `intellijPlatform { bundledPlugin(...) }`.
+
+### CLI integration
+
+- Keep `JjCli` as the only low-level process execution layer; do not spawn `jj` directly from VCS providers or revisions.
+- Add new `jj` use cases to `JjCommands` so command construction, repo working directory selection, and JSON-vs-text execution stay centralized.
+- Use `JjCommandFactory` for reusable `JjCli.Request` construction when adding or changing command shapes.
+- Keep JSON parsing/template logic in `JjJsonCommand`, `JjJsonDecoders`, and `cli/template/`.
+
+### Repository/path handling
+
+- Centralize repo-relative path logic in `JjRepository` / `JjPathUtil`.
+- Prefer `repo.relativize(...)`, `repo.normalizeRelativePath(...)`, and `repo.resolveRelativePath(...)` over duplicating string slicing in providers.
+- Current jj-backed VCS integrations live mainly in `JjChangeProvider`, `JjHistoryProvider`, `JjAnnotationProvider`, `JjDiffProvider`, `JjContentRevision`, and `JjFileRevision`.
 
 ### IntelliJ Platform Gradle Plugin v2 specifics
 

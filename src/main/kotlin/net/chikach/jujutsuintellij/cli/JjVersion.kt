@@ -38,13 +38,7 @@ class JjVersion {
         cached?.let { return it }
         val dir = workDir ?: Path.of(System.getProperty("user.home") ?: ".")
         return try {
-            val result = JjCli.getInstance().execute(
-                JjCli.Request(
-                    workDir = dir,
-                    args = listOf("--version"),
-                    timeoutMs = 5_000L,
-                )
-            )
+            val result = JjCommands.getInstance().version(dir)
             if (!result.isSuccess) {
                 LOG.info("jj --version failed (exit=${result.exitCode}): ${result.stderr.trim()}")
                 return null

@@ -5,11 +5,9 @@ import com.intellij.openapi.vcs.VcsException
 import com.intellij.openapi.vcs.changes.ContentRevision
 import com.intellij.openapi.vcs.history.VcsRevisionNumber
 import com.intellij.vcsUtil.VcsUtil
-import net.chikach.jujutsuintellij.cli.JjCli
+import net.chikach.jujutsuintellij.cli.JjCommands
 import net.chikach.jujutsuintellij.model.JjRevisionNumber
 import net.chikach.jujutsuintellij.repo.JjRepository
-import java.io.File
-import java.nio.file.Paths
 
 /**
  * Lazily produces the content of a file at a specific jj revision via `jj file show -r <rev>`.
@@ -22,19 +20,14 @@ class JjContentRevision(
     private val revision: String,
 ) : ContentRevision {
 
-    private val normalizedRelative: String = relativePath.replace('\\', '/')
+    private val normalizedRelative: String = repo.normalizeRelativePath(relativePath)
     private val filePath: FilePath =
-        VcsUtil.getFilePath(File(repo.rootPath, normalizedRelative), false)
+        VcsUtil.getFilePath(repo.resolveRelativePath(normalizedRelative), false)
 
     @Throws(VcsException::class)
     override fun getContent(): String {
         val result = try {
-            JjCli.getInstance().execute(
-                JjCli.Request(
-                    workDir = Paths.get(repo.rootPath),
-                    args = listOf("file", "show", "-r", revision, normalizedRelative),
-                )
-            )
+            JjCommands.getInstance().showFile(repo, revision, normalizedRelative)
         } catch (e: Exception) {
             throw VcsException("Failed to read $normalizedRelative at $revision: ${e.message}", e)
         }

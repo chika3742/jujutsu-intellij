@@ -10,11 +10,10 @@ import com.intellij.openapi.vcs.FileStatus
 import com.intellij.openapi.vcs.changes.*
 import com.intellij.vcsUtil.VcsUtil
 import net.chikach.jujutsuintellij.cli.GitIgnoredScanner
-import net.chikach.jujutsuintellij.cli.JjCli
+import net.chikach.jujutsuintellij.cli.JjCommands
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
 import java.io.File
-import java.nio.file.Paths
 
 /**
  * Populates IntelliJ's Local Changes view from `jj diff --summary --from @- --to @`. Each
@@ -58,12 +57,7 @@ class JjChangeProvider(private val project: Project) : ChangeProvider {
         processedPaths: MutableSet<FilePath>,
     ) {
         val result = try {
-            JjCli.getInstance().execute(
-                JjCli.Request(
-                    workDir = Paths.get(repo.rootPath),
-                    args = listOf("diff", "--summary", "--from", PARENT_REF, "--to", WORKING_COPY_REF),
-                )
-            )
+            JjCommands.getInstance().diffSummary(repo, PARENT_REF, WORKING_COPY_REF)
         } catch (e: Exception) {
             LOG.warn("jj diff failed in ${repo.rootPath}", e)
             return
@@ -95,7 +89,7 @@ class JjChangeProvider(private val project: Project) : ChangeProvider {
         processedPaths: MutableSet<FilePath>,
     ) {
         val relatives = try {
-            GitIgnoredScanner.scan(Paths.get(repo.rootPath))
+            GitIgnoredScanner.scan(repo.rootPathNio)
         } catch (e: Exception) {
             LOG.warn("Ignored-file scan failed in ${repo.rootPath}", e)
             return
@@ -207,8 +201,7 @@ class JjChangeProvider(private val project: Project) : ChangeProvider {
     }
 
     private fun currentContent(repo: JjRepository, relative: String): Pair<FilePath, CurrentContentRevision> {
-        val normalized = relative.replace('\\', '/')
-        val filePath = VcsUtil.getFilePath(File(repo.rootPath, normalized), false)
+        val filePath = VcsUtil.getFilePath(repo.resolveRelativePath(relative), false)
         return filePath to CurrentContentRevision(filePath)
     }
 
@@ -237,20 +230,12 @@ class JjChangeProvider(private val project: Project) : ChangeProvider {
             if (!dirtyScope.belongsTo(filePath)) continue
 
             val repo = manager.getRepositoryForFile(file) ?: continue
-            val relative = relativize(repo, file.path) ?: continue
+            val relative = repo.relativize(file.path) ?: continue
 
             val before = JjContentRevision(repo, relative, PARENT_REF)
             val after = CurrentContentRevision(filePath)
             builder.processChange(Change(before, after, FileStatus.MODIFIED), JujutsuVcs.KEY)
         }
-    }
-
-    private fun relativize(repo: JjRepository, absolutePath: String): String? {
-        val rootPath = repo.rootPath
-        if (absolutePath == rootPath) return ""
-        val prefix = if (rootPath.endsWith('/')) rootPath else "$rootPath/"
-        if (!absolutePath.startsWith(prefix)) return null
-        return absolutePath.substring(prefix.length)
     }
 
     override fun isModifiedDocumentTrackingRequired(): Boolean = true

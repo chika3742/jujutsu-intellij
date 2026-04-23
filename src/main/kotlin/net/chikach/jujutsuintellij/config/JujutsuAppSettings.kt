@@ -1,5 +1,6 @@
 package net.chikach.jujutsuintellij.config
 
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.*
 import com.intellij.util.xmlb.XmlSerializerUtil
 
@@ -13,7 +14,7 @@ class JujutsuAppSettings : PersistentStateComponent<JujutsuAppSettings.State> {
     class State {
         var executablePath: String = ""
         var defaultLogRevset: String = "::@"
-        var commandTimeoutMs: Long = 30_000
+        var commandTimeoutMs: Long = DEFAULT_COMMAND_TIMEOUT_MS
         var enableGitDualMode: Boolean = false
     }
 
@@ -66,6 +67,15 @@ class JujutsuAppSettings : PersistentStateComponent<JujutsuAppSettings.State> {
     }
 
     companion object {
+        const val DEFAULT_COMMAND_TIMEOUT_MS = 30_000L
+
+        @JvmStatic
+        fun currentCommandTimeoutMs(): Long =
+            ApplicationManager.getApplication()
+                ?.getService(JujutsuAppSettings::class.java)
+                ?.commandTimeoutMs
+                ?: DEFAULT_COMMAND_TIMEOUT_MS
+
         @JvmStatic
         fun getInstance(): JujutsuAppSettings = service()
     }

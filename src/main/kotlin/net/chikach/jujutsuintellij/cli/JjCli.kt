@@ -18,7 +18,7 @@ class JjCli {
         val workDir: Path,
         val args: List<String>,
         val stdin: String? = null,
-        val timeoutMs: Long = JujutsuAppSettings.getInstance().commandTimeoutMs,
+        val timeoutMs: Long = JujutsuAppSettings.currentCommandTimeoutMs(),
         val env: Map<String, String> = emptyMap(),
     )
 

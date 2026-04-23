@@ -44,7 +44,7 @@ class JjDiffProvider(private val project: Project) : DiffProvider {
         selectedFile: VirtualFile,
     ): ContentRevision? {
         val repo = repoFor(selectedFile) ?: return null
-        val relative = relativize(repo, selectedFile.path) ?: run {
+        val relative = repo.relativize(selectedFile.path) ?: run {
             if (LOG.isDebugEnabled) LOG.debug("File ${selectedFile.path} is not under ${repo.rootPath}")
             return null
         }
@@ -58,7 +58,7 @@ class JjDiffProvider(private val project: Project) : DiffProvider {
     private fun fallbackLastRevision(filePath: FilePath): ItemLatestState? {
         val manager = JjRepositoryManager.getInstance(project)
         for (repo in manager.getAll()) {
-            if (filePath.path.startsWith(repo.rootPath)) {
+            if (repo.containsPath(filePath.path)) {
                 return ItemLatestState(JjRevisionNumber.WORKING_COPY_PARENT, true, true)
             }
         }
@@ -67,14 +67,6 @@ class JjDiffProvider(private val project: Project) : DiffProvider {
 
     private fun repoFor(file: VirtualFile): JjRepository? =
         JjRepositoryManager.getInstance(project).getRepositoryForFile(file)
-
-    private fun relativize(repo: JjRepository, absolutePath: String): String? {
-        val rootPath = repo.rootPath
-        if (absolutePath == rootPath) return ""
-        val prefix = if (rootPath.endsWith('/')) rootPath else "$rootPath/"
-        if (!absolutePath.startsWith(prefix)) return null
-        return absolutePath.substring(prefix.length)
-    }
 
     companion object {
         private val LOG = logger<JjDiffProvider>()
