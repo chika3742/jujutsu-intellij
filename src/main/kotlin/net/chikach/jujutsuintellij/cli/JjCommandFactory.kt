@@ -64,21 +64,47 @@ internal object JjCommandFactory {
             args = listOf("file", "show", "-r", revision, relativePath),
         )
 
+    fun describe(workDir: Path, message: String): JjCli.Request =
+        request(
+            workDir = workDir,
+            args = listOf("describe", "-m", message),
+        )
+
+    fun newChange(workDir: Path): JjCli.Request =
+        request(
+            workDir = workDir,
+            args = listOf("new"),
+        )
+
+    fun restore(workDir: Path, fromRevision: String, relativePaths: List<String>): JjCli.Request =
+        request(
+            workDir = workDir,
+            args = buildList {
+                add("restore")
+                add("--from")
+                add(fromRevision)
+                addAll(relativePaths)
+            },
+        )
+
+    fun abandon(workDir: Path, revset: String): JjCli.Request =
+        request(
+            workDir = workDir,
+            args = listOf("abandon", revset),
+        )
+
+    fun getDescription(workDir: Path): JjCli.Request =
+        request(
+            workDir = workDir,
+            args = listOf("log", "--no-graph", "-r", "@", "-T", "description"),
+        )
+
     private fun request(
         workDir: Path,
         args: List<String>,
         timeoutMs: Long? = null,
-    ): JjCli.Request =
-        if (timeoutMs != null) {
-            JjCli.Request(
-                workDir = workDir,
-                args = args,
-                timeoutMs = timeoutMs,
-            )
-        } else {
-            JjCli.Request(
-                workDir = workDir,
-                args = args,
-            )
-        }
+    ): JjCli.Request {
+        val base = JjCli.Request(workDir = workDir, args = args)
+        return if (timeoutMs != null) base.copy(timeoutMs = timeoutMs) else base
+    }
 }

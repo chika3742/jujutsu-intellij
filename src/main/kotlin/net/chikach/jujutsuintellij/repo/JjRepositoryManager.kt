@@ -33,7 +33,21 @@ class JjRepositoryManager(private val project: Project) {
         return getRepositoryForRoot(root)
     }
 
-    fun getAll(): Collection<JjRepository> = repositories.values.toList()
+    /**
+     * Returns all Jujutsu repositories in the project.
+     *
+     * The first call scans [ProjectLevelVcsManager.allVersionedRoots] to discover roots that
+     * haven't been accessed yet (e.g. on startup before any file is opened), then caches them.
+     */
+    fun getAll(): Collection<JjRepository> {
+        val vcsManager = ProjectLevelVcsManager.getInstance(project)
+        for (root in vcsManager.allVersionedRoots) {
+            if (vcsManager.getVcsFor(root)?.name == JujutsuVcs.VCS_NAME) {
+                repositories.computeIfAbsent(root) { JjRepository(project, it) }
+            }
+        }
+        return repositories.values.toList()
+    }
 
     fun invalidate(root: VirtualFile) {
         repositories.remove(root)

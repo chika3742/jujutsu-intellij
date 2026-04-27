@@ -68,6 +68,21 @@ class JjCommands {
             )
         )
 
+    fun describe(repo: JjRepository, message: String): JjCommandResult =
+        execute(JjCommandFactory.describe(repo.rootPathNio, message))
+
+    fun newChange(repo: JjRepository): JjCommandResult =
+        execute(JjCommandFactory.newChange(repo.rootPathNio))
+
+    fun restore(repo: JjRepository, fromRevision: String, relativePaths: List<String>): JjCommandResult =
+        execute(JjCommandFactory.restore(repo.rootPathNio, fromRevision, relativePaths))
+
+    fun abandon(repo: JjRepository, revset: String): JjCommandResult =
+        execute(JjCommandFactory.abandon(repo.rootPathNio, revset))
+
+    fun getDescription(repo: JjRepository): JjCommandResult =
+        execute(JjCommandFactory.getDescription(repo.rootPathNio))
+
     private fun execute(request: JjCli.Request): JjCommandResult =
         JjCli.getInstance().execute(request)
 

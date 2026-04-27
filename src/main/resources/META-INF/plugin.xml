@@ -8,6 +8,11 @@
 
     <resource-bundle>messages.JujutsuBundle</resource-bundle>
 
+    <projectListeners>
+        <listener class="net.chikach.jujutsuintellij.ui.statusbar.JjStatusBarMappingListener"
+                  topic="com.intellij.openapi.vcs.VcsMappingListener"/>
+    </projectListeners>
+
     <extensions defaultExtensionNs="com.intellij">
         <applicationConfigurable
                 parentId="tools"
@@ -29,13 +34,31 @@
         <directoryIndexExcludePolicy implementation="net.chikach.jujutsuintellij.vcs.JjDirectoryIndexExcludePolicy"/>
         <treeStructureProvider implementation="net.chikach.jujutsuintellij.ui.JjProjectViewProvider"/>
         <postStartupActivity implementation="net.chikach.jujutsuintellij.vcs.JjGitCoexistence"/>
+
+        <vcs.commitMessageProvider implementation="net.chikach.jujutsuintellij.vcs.JjCommitMessageProvider"/>
+
+        <statusBarWidgetFactory id="jj.working.copy"
+                                implementation="net.chikach.jujutsuintellij.ui.statusbar.JjStatusBarWidgetFactory"/>
     </extensions>
 
     <actions resource-bundle="messages.JujutsuBundle">
+        <action id="Jujutsu.NewChange"
+                class="net.chikach.jujutsuintellij.actions.JjNewChangeAction"/>
+        <action id="Jujutsu.Describe"
+                class="net.chikach.jujutsuintellij.actions.JjDescribeAction"/>
+
+        <action id="Jujutsu.RevisionWidget"
+                class="net.chikach.jujutsuintellij.ui.JjRevisionWidget">
+            <add-to-group group-id="MainToolbarLeft" anchor="last"/>
+        </action>
+
         <group id="Jujutsu.Menu"
                class="net.chikach.jujutsuintellij.actions.JujutsuMenu"
                popup="true"
                searchable="false">
+            <reference ref="Jujutsu.NewChange"/>
+            <reference ref="Jujutsu.Describe"/>
+            <separator/>
             <reference ref="Vcs.ShowTabbedFileHistory"/>
             <reference ref="Annotate"/>
             <reference ref="Compare.SameVersion"/>
@@ -46,6 +69,9 @@
                class="net.chikach.jujutsuintellij.actions.JujutsuMenu"
                popup="true"
                searchable="false">
+            <reference ref="Jujutsu.NewChange"/>
+            <reference ref="Jujutsu.Describe"/>
+            <separator/>
             <reference ref="Vcs.ShowTabbedFileHistory"/>
             <reference ref="Annotate"/>
             <reference ref="Compare.SameVersion"/>
