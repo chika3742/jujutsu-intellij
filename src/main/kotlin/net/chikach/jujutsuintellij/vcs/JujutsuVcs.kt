@@ -12,6 +12,7 @@ import com.intellij.openapi.vcs.checkin.CheckinEnvironment
 import com.intellij.openapi.vcs.diff.DiffProvider
 import com.intellij.openapi.vcs.history.VcsHistoryProvider
 import com.intellij.openapi.vcs.rollback.RollbackEnvironment
+import com.intellij.openapi.vcs.update.UpdateEnvironment
 import net.chikach.jujutsuintellij.JujutsuBundle
 import net.chikach.jujutsuintellij.vcs.JujutsuVcs.Companion.getInstance
 
@@ -32,6 +33,8 @@ class JujutsuVcs(project: Project) : AbstractVcs(project, VCS_NAME) {
     override fun getCheckinEnvironment(): CheckinEnvironment = project.service<JjCheckinEnvironment>()
 
     override fun getRollbackEnvironment(): RollbackEnvironment = project.service<JjRollbackEnvironment>()
+
+    override fun getUpdateEnvironment(): UpdateEnvironment = project.service<JjUpdateEnvironment>()
 
     companion object {
         const val VCS_NAME: String = "Jujutsu"

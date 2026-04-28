@@ -93,11 +93,64 @@ internal object JjCommandFactory {
             args = listOf("abandon", revset),
         )
 
+    fun recentLog(workDir: Path, count: Int, template: String): JjCli.Request =
+        request(
+            workDir = workDir,
+            args = listOf("log", "--no-graph", "-r", "latest(all(), $count)", "-T", template),
+        )
+
+    fun allLog(workDir: Path, template: String): JjCli.Request =
+        request(
+            workDir = workDir,
+            args = listOf("log", "--no-graph", "-r", "all()", "-T", template),
+        )
+
+    fun logByIds(workDir: Path, commitIds: List<String>, template: String): JjCli.Request =
+        request(
+            workDir = workDir,
+            args = listOf("log", "--no-graph", "-r", commitIds.joinToString("|"), "-T", template),
+        )
+
+    fun bookmarkList(workDir: Path): JjCli.Request =
+        request(
+            workDir = workDir,
+            args = listOf("bookmark", "list", "--all"),
+        )
+
+    fun configGet(workDir: Path, key: String): JjCli.Request =
+        request(
+            workDir = workDir,
+            args = listOf("config", "get", key),
+            timeoutMs = VERSION_TIMEOUT_MS,
+        )
+
     fun getDescription(workDir: Path): JjCli.Request =
         request(
             workDir = workDir,
             args = listOf("log", "--no-graph", "-r", "@", "-T", "description"),
         )
+
+    fun bookmarkCreate(workDir: Path, name: String, revision: String = "@"): JjCli.Request =
+        request(workDir, listOf("bookmark", "create", "--revision", revision, name))
+
+    fun bookmarkDelete(workDir: Path, name: String): JjCli.Request =
+        request(workDir, listOf("bookmark", "delete", name))
+
+    fun bookmarkSet(workDir: Path, name: String, revision: String = "@"): JjCli.Request =
+        request(workDir, listOf("bookmark", "set", "--revision", revision, name))
+
+    fun gitFetch(workDir: Path, remote: String? = null): JjCli.Request =
+        request(workDir, buildList {
+            add("git"); add("fetch")
+            if (remote != null) { add("--remote"); add(remote) }
+        })
+
+    fun gitPush(workDir: Path, bookmark: String? = null, remote: String? = null): JjCli.Request =
+        request(workDir, buildList {
+            add("git"); add("push")
+            if (bookmark != null) { add("--bookmark"); add(bookmark) }
+            if (remote != null) { add("--remote"); add(remote) }
+        })
 
     private fun request(
         workDir: Path,

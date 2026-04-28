@@ -83,6 +83,36 @@ class JjCommands {
     fun getDescription(repo: JjRepository): JjCommandResult =
         execute(JjCommandFactory.getDescription(repo.rootPathNio))
 
+    fun recentLog(repo: JjRepository, count: Int, template: String): List<JsonObject> =
+        executeObjects(JjCommandFactory.recentLog(repo.rootPathNio, count, template))
+
+    fun allLog(repo: JjRepository, template: String): List<JsonObject> =
+        executeObjects(JjCommandFactory.allLog(repo.rootPathNio, template))
+
+    fun logByIds(repo: JjRepository, commitIds: List<String>, template: String): List<JsonObject> =
+        executeObjects(JjCommandFactory.logByIds(repo.rootPathNio, commitIds, template))
+
+    fun bookmarkList(repo: JjRepository): JjCommandResult =
+        execute(JjCommandFactory.bookmarkList(repo.rootPathNio))
+
+    fun configGet(repo: JjRepository, key: String): JjCommandResult =
+        execute(JjCommandFactory.configGet(repo.rootPathNio, key))
+
+    fun bookmarkCreate(repo: JjRepository, name: String, revision: String = "@"): JjCommandResult =
+        execute(JjCommandFactory.bookmarkCreate(repo.rootPathNio, name, revision))
+
+    fun bookmarkDelete(repo: JjRepository, name: String): JjCommandResult =
+        execute(JjCommandFactory.bookmarkDelete(repo.rootPathNio, name))
+
+    fun bookmarkSet(repo: JjRepository, name: String, revision: String = "@"): JjCommandResult =
+        execute(JjCommandFactory.bookmarkSet(repo.rootPathNio, name, revision))
+
+    fun gitFetch(repo: JjRepository, remote: String? = null): JjCommandResult =
+        execute(JjCommandFactory.gitFetch(repo.rootPathNio, remote))
+
+    fun gitPush(repo: JjRepository, bookmark: String? = null, remote: String? = null): JjCommandResult =
+        execute(JjCommandFactory.gitPush(repo.rootPathNio, bookmark, remote))
+
     private fun execute(request: JjCli.Request): JjCommandResult =
         JjCli.getInstance().execute(request)
 

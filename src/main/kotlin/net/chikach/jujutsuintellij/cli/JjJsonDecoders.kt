@@ -17,6 +17,22 @@ data class HistoryEntryJson(
         get() = JjJsonDecoders.formatAuthor(authorName, authorEmail)
 }
 
+data class LogEntryJson(
+    val commitId: String,
+    val changeId: String,
+    val parentIds: List<String>,
+    val authorName: String,
+    val authorEmail: String,
+    val authorTime: Date,
+    val description: String,
+)
+
+data class TimedCommitJson(
+    val commitId: String,
+    val parentIds: List<String>,
+    val time: Date,
+)
+
 data class AnnotationEntryJson(
     val commitId: String,
     val changeId: String,
@@ -30,6 +46,34 @@ data class AnnotationEntryJson(
 }
 
 object JjJsonDecoders {
+    fun decodeLogEntries(objects: List<JsonObject>): List<LogEntryJson> =
+        objects.mapNotNull { obj ->
+            val commitId = obj["ci"]?.jsonPrimitive?.content ?: return@mapNotNull null
+            val rawParents = obj["p"]?.jsonPrimitive?.content ?: ""
+            LogEntryJson(
+                commitId = commitId,
+                changeId = obj["ch"]?.jsonPrimitive?.content ?: "",
+                parentIds = if (rawParents.isBlank()) emptyList()
+                else rawParents.split(" ").filter { it.isNotBlank() },
+                authorName = obj["an"]?.jsonPrimitive?.content ?: "",
+                authorEmail = obj["ae"]?.jsonPrimitive?.content ?: "",
+                authorTime = parseTimestamp(obj["at"]?.jsonPrimitive?.content ?: "") ?: Date(0),
+                description = obj["d"]?.jsonPrimitive?.content ?: "",
+            )
+        }
+
+    fun decodeTimedCommits(objects: List<JsonObject>): List<TimedCommitJson> =
+        objects.mapNotNull { obj ->
+            val commitId = obj["ci"]?.jsonPrimitive?.content ?: return@mapNotNull null
+            val rawParents = obj["p"]?.jsonPrimitive?.content ?: ""
+            TimedCommitJson(
+                commitId = commitId,
+                parentIds = if (rawParents.isBlank()) emptyList()
+                else rawParents.split(" ").filter { it.isNotBlank() },
+                time = parseTimestamp(obj["at"]?.jsonPrimitive?.content ?: "") ?: Date(0),
+            )
+        }
+
     fun decodeHistoryEntries(objects: List<JsonObject>): List<HistoryEntryJson> =
         objects.map { obj ->
             HistoryEntryJson(

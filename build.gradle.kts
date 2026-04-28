@@ -22,7 +22,7 @@ dependencies {
 
     intellijPlatform {
         intellijIdea("2025.2.4")
-        bundledModule("intellij.platform.vcs.impl")
+        bundledPlugin("com.intellij.modules.vcs")
         testFramework(org.jetbrains.intellij.platform.gradle.TestFrameworkType.Platform)
     }
 }

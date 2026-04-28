@@ -46,6 +46,16 @@
                 class="net.chikach.jujutsuintellij.actions.JjNewChangeAction"/>
         <action id="Jujutsu.Describe"
                 class="net.chikach.jujutsuintellij.actions.JjDescribeAction"/>
+        <action id="Jujutsu.Abandon"
+                class="net.chikach.jujutsuintellij.actions.JjAbandonAction"/>
+        <action id="Jujutsu.Fetch"
+                class="net.chikach.jujutsuintellij.actions.JjFetchAction"/>
+        <action id="Jujutsu.Push"
+                class="net.chikach.jujutsuintellij.actions.JjPushAction"/>
+        <action id="Jujutsu.BookmarkCreate"
+                class="net.chikach.jujutsuintellij.actions.JjBookmarkCreateAction"/>
+        <action id="Jujutsu.BookmarkDelete"
+                class="net.chikach.jujutsuintellij.actions.JjBookmarkDeleteAction"/>
 
         <action id="Jujutsu.RevisionWidget"
                 class="net.chikach.jujutsuintellij.ui.JjRevisionWidget">
@@ -58,6 +68,15 @@
                searchable="false">
             <reference ref="Jujutsu.NewChange"/>
             <reference ref="Jujutsu.Describe"/>
+            <reference ref="Jujutsu.Abandon"/>
+            <separator/>
+            <reference ref="Jujutsu.Fetch"/>
+            <reference ref="Jujutsu.Push"/>
+            <separator/>
+            <group id="Jujutsu.Bookmarks" popup="true">
+                <reference ref="Jujutsu.BookmarkCreate"/>
+                <reference ref="Jujutsu.BookmarkDelete"/>
+            </group>
             <separator/>
             <reference ref="Vcs.ShowTabbedFileHistory"/>
             <reference ref="Annotate"/>
@@ -71,6 +90,10 @@
                searchable="false">
             <reference ref="Jujutsu.NewChange"/>
             <reference ref="Jujutsu.Describe"/>
+            <reference ref="Jujutsu.Abandon"/>
+            <separator/>
+            <reference ref="Jujutsu.Fetch"/>
+            <reference ref="Jujutsu.Push"/>
             <separator/>
             <reference ref="Vcs.ShowTabbedFileHistory"/>
             <reference ref="Annotate"/>
