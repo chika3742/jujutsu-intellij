@@ -148,6 +148,26 @@ fun commitRefExpr(source: String): CommitRefExpr = RenderedCommitRefExpr(source)
 
 fun annotationLineExpr(source: String): AnnotationLineExpr = RenderedAnnotationLineExpr(source)
 
+fun <T : JjTemplateExpr> listExpr(source: String): ListExpr<T> = RenderedListExpr(source)
+
+fun <ElementT : JjTemplateExpr, OutT : JjTemplateExpr> lambdaExpr(source: String): LambdaExpr<ElementT, OutT> =
+    RenderedLambdaExpr(source)
+
+/**
+ * Builds a typed lambda expression from a Kotlin lambda. [elementFactory] constructs a
+ * placeholder for the lambda parameter using the supplied variable name; the name is referenced
+ * inside the rendered jj template body.
+ */
+fun <ElementT : JjTemplateExpr, OutT : JjTemplateExpr> lambda(
+    elementFactory: (varName: String) -> ElementT,
+    body: (ElementT) -> OutT,
+): LambdaExpr<ElementT, OutT> {
+    val varName = "p"
+    val element = elementFactory(varName)
+    val out = body(element)
+    return lambdaExpr("|$varName| ${out.render()}")
+}
+
 fun <InT: JjTemplateExpr, OutT: JjTemplateExpr> ListExpr<InT>.map(lambda: LambdaExpr<InT, OutT>): ListExpr<OutT> =
     RenderedListExpr(methodCall(this, "map", lambda))
 
@@ -163,6 +183,10 @@ fun CommitExpr.parents(): ListExpr<CommitExpr> = RenderedListExpr(methodCall(thi
 
 fun CommitExpr.localBookmarks(): ListExpr<CommitRefExpr> = RenderedListExpr(methodCall(this, "local_bookmarks"))
 
+/** Maps `parents` to their commit ids. */
+fun ListExpr<CommitExpr>.commitIds(): ListExpr<SerializableTemplateExpr> =
+    map(lambda(::commitExpr) { it.commitId() })
+
 fun SignatureExpr.name(): StringExpr = RenderedStringExpr(methodCall(this, "name"))
 
 fun SignatureExpr.email(): StringExpr = RenderedStringExpr(methodCall(this, "email"))
@@ -172,6 +196,19 @@ fun SignatureExpr.timestamp(): TimestampExpr = RenderedTimestampExpr(methodCall(
 fun AnnotationLineExpr.commit(): CommitExpr = RenderedCommitExpr(methodCall(this, "commit"))
 
 fun AnnotationLineExpr.lineNumber(): IntegerExpr = RenderedIntegerExpr(methodCall(this, "line_number"))
+
+fun CommitRefExpr.name(): StringExpr = RenderedStringExpr(methodCall(this, "name"))
+
+fun CommitRefExpr.remote(): StringExpr = RenderedStringExpr(methodCall(this, "remote"))
+
+/**
+ * Renders the commit id of `normal_target()` when present, or an empty string otherwise.
+ * `normal_target()` is `Option<Commit>`, which is empty during a bookmark conflict.
+ */
+fun CommitRefExpr.normalTargetCommitId(): StringExpr {
+    val src = render()
+    return RenderedStringExpr("if($src.normal_target(), $src.normal_target().commit_id(), \"\")")
+}
 
 class CommitScope internal constructor(
     val self: CommitExpr,
@@ -193,8 +230,18 @@ class AnnotationScope internal constructor(
     val lineNumber: IntegerExpr get() = self.lineNumber()
 }
 
+class BookmarkRefScope internal constructor(
+    val self: CommitRefExpr,
+) {
+    val name: StringExpr get() = self.name()
+    val remote: StringExpr get() = self.remote()
+    val normalTargetCommitId: StringExpr get() = self.normalTargetCommitId()
+}
+
 object JjTemplateScopes {
     fun commit(): CommitScope = CommitScope(commitExpr("self"))
 
     fun annotation(): AnnotationScope = AnnotationScope(annotationLineExpr("self"))
+
+    fun bookmarkRef(): BookmarkRefScope = BookmarkRefScope(commitRefExpr("self"))
 }

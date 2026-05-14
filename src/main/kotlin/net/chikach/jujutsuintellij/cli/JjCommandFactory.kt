@@ -117,6 +117,12 @@ internal object JjCommandFactory {
             args = listOf("bookmark", "list", "--all"),
         )
 
+    fun bookmarkListJson(workDir: Path, template: String): JjCli.Request =
+        request(
+            workDir = workDir,
+            args = listOf("bookmark", "list", "--all-remotes", "-T", template),
+        )
+
     fun configGet(workDir: Path, key: String): JjCli.Request =
         request(
             workDir = workDir,

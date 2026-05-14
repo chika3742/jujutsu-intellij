@@ -1,6 +1,7 @@
 package net.chikach.jujutsuintellij.cli
 
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 import java.text.SimpleDateFormat
 import java.util.*
@@ -49,12 +50,10 @@ object JjJsonDecoders {
     fun decodeLogEntries(objects: List<JsonObject>): List<LogEntryJson> =
         objects.mapNotNull { obj ->
             val commitId = obj["ci"]?.jsonPrimitive?.content ?: return@mapNotNull null
-            val rawParents = obj["p"]?.jsonPrimitive?.content ?: ""
             LogEntryJson(
                 commitId = commitId,
                 changeId = obj["ch"]?.jsonPrimitive?.content ?: "",
-                parentIds = if (rawParents.isBlank()) emptyList()
-                else rawParents.split(" ").filter { it.isNotBlank() },
+                parentIds = decodeStringArray(obj["p"]),
                 authorName = obj["an"]?.jsonPrimitive?.content ?: "",
                 authorEmail = obj["ae"]?.jsonPrimitive?.content ?: "",
                 authorTime = parseTimestamp(obj["at"]?.jsonPrimitive?.content ?: "") ?: Date(0),
@@ -65,14 +64,17 @@ object JjJsonDecoders {
     fun decodeTimedCommits(objects: List<JsonObject>): List<TimedCommitJson> =
         objects.mapNotNull { obj ->
             val commitId = obj["ci"]?.jsonPrimitive?.content ?: return@mapNotNull null
-            val rawParents = obj["p"]?.jsonPrimitive?.content ?: ""
             TimedCommitJson(
                 commitId = commitId,
-                parentIds = if (rawParents.isBlank()) emptyList()
-                else rawParents.split(" ").filter { it.isNotBlank() },
+                parentIds = decodeStringArray(obj["p"]),
                 time = parseTimestamp(obj["at"]?.jsonPrimitive?.content ?: "") ?: Date(0),
             )
         }
+
+    private fun decodeStringArray(element: kotlinx.serialization.json.JsonElement?): List<String> {
+        if (element == null) return emptyList()
+        return element.jsonArray.map { it.jsonPrimitive.content }
+    }
 
     fun decodeHistoryEntries(objects: List<JsonObject>): List<HistoryEntryJson> =
         objects.map { obj ->

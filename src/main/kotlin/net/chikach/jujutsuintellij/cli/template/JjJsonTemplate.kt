@@ -29,6 +29,10 @@ private data class JsonSerializedValue(private val value: SerializableExpr) : Jj
     override fun render(ctx: RenderContext): String = json(value).render(ctx)
 }
 
+private data class JsonSerializedListValue(private val list: ListExpr<SerializableExpr>) : JjJsonValue {
+    override fun render(ctx: RenderContext): String = "json(${list.render(ctx)})"
+}
+
 private data class JsonArrayValue(private val items: List<JjJsonValue>) : JjJsonValue {
     override fun render(ctx: RenderContext): String {
         val parts = mutableListOf<String>()
@@ -83,12 +87,18 @@ fun bool(value: BooleanExpr): JjJsonValue = JsonBooleanValue(value)
 
 fun serialized(value: SerializableExpr): JjJsonValue = JsonSerializedValue(value)
 
+/** Emits a JSON array by serializing the list with jj's `json()` function. */
+fun serialized(list: ListExpr<SerializableExpr>): JjJsonValue = JsonSerializedListValue(list)
+
 object JjTemplates {
     fun commitJsonLine(builder: CommitScope.() -> JjJsonValue): String =
         renderJsonLine(JjTemplateScopes.commit().builder())
 
     fun annotationJsonLine(builder: AnnotationScope.() -> JjJsonValue): String =
         renderJsonLine(JjTemplateScopes.annotation().builder())
+
+    fun bookmarkRefJsonLine(builder: BookmarkRefScope.() -> JjJsonValue): String =
+        renderJsonLine(JjTemplateScopes.bookmarkRef().builder())
 
     private fun renderJsonLine(value: JjJsonValue): String =
         concatenate(listOf(value.render(), RenderContext.quoteString("\n")))

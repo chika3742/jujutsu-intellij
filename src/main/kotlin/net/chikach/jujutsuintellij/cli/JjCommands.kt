@@ -95,6 +95,9 @@ class JjCommands {
     fun bookmarkList(repo: JjRepository): JjCommandResult =
         execute(JjCommandFactory.bookmarkList(repo.rootPathNio))
 
+    fun bookmarkListJson(repo: JjRepository, template: String): List<JsonObject> =
+        executeObjects(JjCommandFactory.bookmarkListJson(repo.rootPathNio, template))
+
     fun configGet(repo: JjRepository, key: String): JjCommandResult =
         execute(JjCommandFactory.configGet(repo.rootPathNio, key))
 
