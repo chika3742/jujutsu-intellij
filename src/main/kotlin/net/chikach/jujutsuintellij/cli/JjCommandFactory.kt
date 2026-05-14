@@ -152,6 +152,14 @@ internal object JjCommandFactory {
             if (remote != null) { add("--remote"); add(remote) }
         })
 
+    /** Returns lines of `<commitId>\t<bookmarkName1>\t<bookmarkName2>…` for each commit with local bookmarks. */
+    fun bookmarkCommitsForLog(workDir: Path): JjCli.Request =
+        request(workDir, listOf(
+            "log", "--no-graph",
+            "-r", "local_bookmarks()",
+            "-T", "commit_id() ++ \"\\t\" ++ separate(\"\\t\", local_bookmarks()) ++ \"\\n\"",
+        ))
+
     private fun request(
         workDir: Path,
         args: List<String>,

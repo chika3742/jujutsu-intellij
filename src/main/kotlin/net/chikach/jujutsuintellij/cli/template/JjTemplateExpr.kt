@@ -20,11 +20,15 @@ sealed interface TimestampExpr : SerializableTemplateExpr
 
 sealed interface CommitExpr : SerializableExpr
 
+sealed interface CommitRefExpr : SerializableExpr
+
 sealed interface SignatureExpr : SerializableExpr
 
 sealed interface AnnotationLineExpr : JjTemplateExpr
 
 sealed interface ListExpr<out T : JjTemplateExpr> : JjTemplateExpr
+
+sealed interface LambdaExpr<out ElementT : JjTemplateExpr, out OutT> : JjTemplateExpr
 
 object RenderContext {
     fun quoteString(value: String): String {
@@ -92,9 +96,11 @@ private class RenderedIntegerExpr(source: String) : RenderedExpr(source), Intege
 private class RenderedBooleanExpr(source: String) : RenderedExpr(source), BooleanExpr
 private class RenderedTimestampExpr(source: String) : RenderedExpr(source), TimestampExpr
 private class RenderedCommitExpr(source: String) : RenderedExpr(source), CommitExpr
+private class RenderedCommitRefExpr(source: String) : RenderedExpr(source), CommitRefExpr
 private class RenderedSignatureExpr(source: String) : RenderedExpr(source), SignatureExpr
 private class RenderedAnnotationLineExpr(source: String) : RenderedExpr(source), AnnotationLineExpr
 private class RenderedListExpr<T : JjTemplateExpr>(source: String) : RenderedExpr(source), ListExpr<T>
+private class RenderedLambdaExpr<ElementT : JjTemplateExpr, OutT: JjTemplateExpr>(source: String) : RenderedExpr(source), LambdaExpr<ElementT, OutT>
 
 private fun methodCall(target: JjTemplateExpr, method: String, vararg args: JjTemplateExpr): String =
     buildString {
@@ -114,6 +120,14 @@ private fun functionCall(name: String, vararg args: JjTemplateExpr): String =
         append(')')
     }
 
+private fun lambda(varName: String = "e", expr: JjTemplateExpr): String =
+    buildString {
+        append("|")
+        append(varName)
+        append("| ")
+        append(expr.render())
+    }
+
 fun literal(value: String): StringExpr = RenderedStringExpr(RenderContext.quoteString(value))
 
 fun stringify(value: TemplateExpr): StringExpr = RenderedStringExpr(functionCall("stringify", value))
@@ -130,7 +144,12 @@ fun booleanExpr(source: String): BooleanExpr = RenderedBooleanExpr(source)
 
 fun commitExpr(source: String): CommitExpr = RenderedCommitExpr(source)
 
+fun commitRefExpr(source: String): CommitRefExpr = RenderedCommitRefExpr(source)
+
 fun annotationLineExpr(source: String): AnnotationLineExpr = RenderedAnnotationLineExpr(source)
+
+fun <InT: JjTemplateExpr, OutT: JjTemplateExpr> ListExpr<InT>.map(lambda: LambdaExpr<InT, OutT>): ListExpr<OutT> =
+    RenderedListExpr(methodCall(this, "map", lambda))
 
 fun CommitExpr.commitId(): SerializableTemplateExpr = serializableTemplateExpr(methodCall(this, "commit_id"))
 
@@ -141,6 +160,8 @@ fun CommitExpr.description(): StringExpr = RenderedStringExpr(methodCall(this, "
 fun CommitExpr.author(): SignatureExpr = RenderedSignatureExpr(methodCall(this, "author"))
 
 fun CommitExpr.parents(): ListExpr<CommitExpr> = RenderedListExpr(methodCall(this, "parents"))
+
+fun CommitExpr.localBookmarks(): ListExpr<CommitRefExpr> = RenderedListExpr(methodCall(this, "local_bookmarks"))
 
 fun SignatureExpr.name(): StringExpr = RenderedStringExpr(methodCall(this, "name"))
 

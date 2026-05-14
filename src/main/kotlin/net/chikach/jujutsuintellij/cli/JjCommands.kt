@@ -113,6 +113,9 @@ class JjCommands {
     fun gitPush(repo: JjRepository, bookmark: String? = null, remote: String? = null): JjCommandResult =
         execute(JjCommandFactory.gitPush(repo.rootPathNio, bookmark, remote))
 
+    fun bookmarkCommitsForLog(repo: JjRepository): JjCommandResult =
+        execute(JjCommandFactory.bookmarkCommitsForLog(repo.rootPathNio))
+
     private fun execute(request: JjCli.Request): JjCommandResult =
         JjCli.getInstance().execute(request)
 
