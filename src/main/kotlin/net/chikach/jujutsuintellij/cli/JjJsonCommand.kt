@@ -3,7 +3,9 @@ package net.chikach.jujutsuintellij.cli
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import kotlinx.serialization.json.JsonObject
+import org.jetbrains.annotations.ApiStatus
 
+@ApiStatus.Internal
 @Service(Service.Level.APP)
 class JjJsonCommand {
 

@@ -4,123 +4,152 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import kotlinx.serialization.json.JsonObject
 import net.chikach.jujutsuintellij.repo.JjRepository
+import org.jetbrains.annotations.ApiStatus
 import java.nio.file.Path
 
+/**
+ * Low-level wrapper around the `jj` CLI. Call this from [net.chikach.jujutsuintellij.repo.JjRepository]
+ * (or [net.chikach.jujutsuintellij.cli.JjVersion] for the pre-repo `--version` check). All other
+ * callers should go through the repository layer.
+ */
+@ApiStatus.Internal
 @Service(Service.Level.APP)
 class JjCommands {
 
     fun version(workDir: Path): JjCommandResult =
-        execute(JjCommandFactory.version(workDir))
+        execute(request(workDir, listOf("--version"), timeoutMs = VERSION_TIMEOUT_MS))
 
     fun diffSummary(
         repo: JjRepository,
         fromRef: String,
         toRef: String,
     ): JjCommandResult =
-        execute(
-            JjCommandFactory.diffSummary(
-                workDir = repo.rootPathNio,
-                fromRef = fromRef,
-                toRef = toRef,
-            )
-        )
+        execute(request(repo.rootPathNio, listOf("diff", "--summary", "--from", fromRef, "--to", toRef)))
 
     fun fileHistory(
         repo: JjRepository,
         relativePath: String,
         template: String,
         revset: String = DEFAULT_LOG_REVSET,
-    ): List<JsonObject> =
-        executeObjects(
-            JjCommandFactory.fileHistory(
-                workDir = repo.rootPathNio,
-                revset = revset,
-                template = template,
-                relativePath = repo.normalizeRelativePath(relativePath),
-            )
+    ): List<JsonObject> {
+        val rel = repo.normalizeRelativePath(relativePath)
+        return executeObjects(
+            request(repo.rootPathNio, listOf("log", "--no-graph", "-r", revset, "-T", template, "--", rel))
         )
+    }
 
     fun annotateFile(
         repo: JjRepository,
         relativePath: String,
         template: String,
         revision: String? = null,
-    ): List<JsonObject> =
-        executeObjects(
-            JjCommandFactory.annotateFile(
-                workDir = repo.rootPathNio,
-                template = template,
-                relativePath = repo.normalizeRelativePath(relativePath),
-                revision = revision,
-            )
-        )
+    ): List<JsonObject> {
+        val rel = repo.normalizeRelativePath(relativePath)
+        val args = buildList {
+            add("file")
+            add("annotate")
+            add("-T"); add(template)
+            if (revision != null) { add("-r"); add(revision) }
+            add(rel)
+        }
+        return executeObjects(request(repo.rootPathNio, args))
+    }
 
     fun showFile(
         repo: JjRepository,
         revision: String,
         relativePath: String,
-    ): JjCommandResult =
-        execute(
-            JjCommandFactory.showFile(
-                workDir = repo.rootPathNio,
-                revision = revision,
-                relativePath = repo.normalizeRelativePath(relativePath),
-            )
-        )
+    ): JjCommandResult {
+        val rel = repo.normalizeRelativePath(relativePath)
+        return execute(request(repo.rootPathNio, listOf("file", "show", "-r", revision, rel)))
+    }
 
     fun describe(repo: JjRepository, message: String): JjCommandResult =
-        execute(JjCommandFactory.describe(repo.rootPathNio, message))
+        execute(request(repo.rootPathNio, listOf("describe", "-m", message)))
 
     fun newChange(repo: JjRepository): JjCommandResult =
-        execute(JjCommandFactory.newChange(repo.rootPathNio))
+        execute(request(repo.rootPathNio, listOf("new")))
 
     fun commit(repo: JjRepository, message: String): JjCommandResult =
-        execute(JjCommandFactory.commit(repo.rootPathNio, message))
+        execute(request(repo.rootPathNio, listOf("commit", "-m", message)))
 
-    fun restore(repo: JjRepository, fromRevision: String, relativePaths: List<String>): JjCommandResult =
-        execute(JjCommandFactory.restore(repo.rootPathNio, fromRevision, relativePaths))
+    fun restore(repo: JjRepository, fromRevision: String, relativePaths: List<String>): JjCommandResult {
+        val args = buildList {
+            add("restore")
+            add("--from"); add(fromRevision)
+            addAll(relativePaths)
+        }
+        return execute(request(repo.rootPathNio, args))
+    }
 
     fun abandon(repo: JjRepository, revset: String): JjCommandResult =
-        execute(JjCommandFactory.abandon(repo.rootPathNio, revset))
+        execute(request(repo.rootPathNio, listOf("abandon", revset)))
 
     fun getDescription(repo: JjRepository): JjCommandResult =
-        execute(JjCommandFactory.getDescription(repo.rootPathNio))
+        execute(request(repo.rootPathNio, listOf("log", "--no-graph", "-r", "@", "-T", "description")))
 
     fun recentLog(repo: JjRepository, count: Int, template: String): List<JsonObject> =
-        executeObjects(JjCommandFactory.recentLog(repo.rootPathNio, count, template))
+        executeObjects(
+            request(repo.rootPathNio, listOf("log", "--no-graph", "-r", "latest(all(), $count)", "-T", template))
+        )
 
     fun allLog(repo: JjRepository, template: String): List<JsonObject> =
-        executeObjects(JjCommandFactory.allLog(repo.rootPathNio, template))
+        executeObjects(
+            request(repo.rootPathNio, listOf("log", "--no-graph", "-r", "all()", "-T", template))
+        )
 
     fun logByIds(repo: JjRepository, commitIds: List<String>, template: String): List<JsonObject> =
-        executeObjects(JjCommandFactory.logByIds(repo.rootPathNio, commitIds, template))
+        executeObjects(
+            request(repo.rootPathNio, listOf("log", "--no-graph", "-r", commitIds.joinToString("|"), "-T", template))
+        )
 
     fun bookmarkList(repo: JjRepository): JjCommandResult =
-        execute(JjCommandFactory.bookmarkList(repo.rootPathNio))
+        execute(request(repo.rootPathNio, listOf("bookmark", "list", "--all")))
 
     fun bookmarkListJson(repo: JjRepository, template: String): List<JsonObject> =
-        executeObjects(JjCommandFactory.bookmarkListJson(repo.rootPathNio, template))
+        executeObjects(
+            request(repo.rootPathNio, listOf("bookmark", "list", "--all-remotes", "-T", template))
+        )
 
     fun configGet(repo: JjRepository, key: String): JjCommandResult =
-        execute(JjCommandFactory.configGet(repo.rootPathNio, key))
+        execute(request(repo.rootPathNio, listOf("config", "get", key), timeoutMs = VERSION_TIMEOUT_MS))
 
     fun bookmarkCreate(repo: JjRepository, name: String, revision: String = "@"): JjCommandResult =
-        execute(JjCommandFactory.bookmarkCreate(repo.rootPathNio, name, revision))
+        execute(request(repo.rootPathNio, listOf("bookmark", "create", "--revision", revision, name)))
 
     fun bookmarkDelete(repo: JjRepository, name: String): JjCommandResult =
-        execute(JjCommandFactory.bookmarkDelete(repo.rootPathNio, name))
+        execute(request(repo.rootPathNio, listOf("bookmark", "delete", name)))
 
     fun bookmarkSet(repo: JjRepository, name: String, revision: String = "@"): JjCommandResult =
-        execute(JjCommandFactory.bookmarkSet(repo.rootPathNio, name, revision))
+        execute(request(repo.rootPathNio, listOf("bookmark", "set", "--revision", revision, name)))
 
-    fun gitFetch(repo: JjRepository, remote: String? = null): JjCommandResult =
-        execute(JjCommandFactory.gitFetch(repo.rootPathNio, remote))
+    fun gitFetch(repo: JjRepository, remote: String? = null): JjCommandResult {
+        val args = buildList {
+            add("git")
+            add("fetch")
+            if (remote != null) { add("--remote"); add(remote) }
+        }
+        return execute(request(repo.rootPathNio, args))
+    }
 
-    fun gitPush(repo: JjRepository, bookmark: String? = null, remote: String? = null): JjCommandResult =
-        execute(JjCommandFactory.gitPush(repo.rootPathNio, bookmark, remote))
+    fun gitPush(repo: JjRepository, bookmark: String? = null, remote: String? = null): JjCommandResult {
+        val args = buildList {
+            add("git")
+            add("push")
+            if (bookmark != null) { add("--bookmark"); add(bookmark) }
+            if (remote != null) { add("--remote"); add(remote) }
+        }
+        return execute(request(repo.rootPathNio, args))
+    }
 
+    /** Returns lines of `<commitId>\t<bookmarkName1>\t<bookmarkName2>…` for each commit with local bookmarks. */
     fun bookmarkCommitsForLog(repo: JjRepository): JjCommandResult =
-        execute(JjCommandFactory.bookmarkCommitsForLog(repo.rootPathNio))
+        execute(request(repo.rootPathNio, listOf(
+            "log",
+            "--no-graph",
+            "-r", "local_bookmarks()",
+            "-T", "commit_id() ++ \"\\t\" ++ separate(\"\\t\", local_bookmarks()) ++ \"\\n\"",
+        )))
 
     private fun execute(request: JjCli.Request): JjCommandResult =
         JjCli.getInstance().execute(request)
@@ -128,7 +157,17 @@ class JjCommands {
     private fun executeObjects(request: JjCli.Request): List<JsonObject> =
         JjJsonCommand.getInstance().executeObjects(request)
 
+    private fun request(
+        workDir: Path,
+        args: List<String>,
+        timeoutMs: Long? = null,
+    ): JjCli.Request {
+        val base = JjCli.Request(workDir = workDir, args = args)
+        return if (timeoutMs != null) base.copy(timeoutMs = timeoutMs) else base
+    }
+
     companion object {
+        const val VERSION_TIMEOUT_MS = 5_000L
         private const val DEFAULT_LOG_REVSET = "::@"
 
         @JvmStatic

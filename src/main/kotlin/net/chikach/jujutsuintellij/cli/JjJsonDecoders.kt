@@ -6,7 +6,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import java.text.SimpleDateFormat
 import java.util.*
 
-data class HistoryEntryJson(
+internal data class HistoryEntryJson(
     val commitId: String,
     val changeId: String,
     val authorName: String,
@@ -18,7 +18,7 @@ data class HistoryEntryJson(
         get() = JjJsonDecoders.formatAuthor(authorName, authorEmail)
 }
 
-data class LogEntryJson(
+internal data class LogEntryJson(
     val commitId: String,
     val changeId: String,
     val parentIds: List<String>,
@@ -28,13 +28,13 @@ data class LogEntryJson(
     val description: String,
 )
 
-data class TimedCommitJson(
+internal data class TimedCommitJson(
     val commitId: String,
     val parentIds: List<String>,
     val time: Date,
 )
 
-data class AnnotationEntryJson(
+internal data class AnnotationEntryJson(
     val commitId: String,
     val changeId: String,
     val authorName: String,
@@ -47,7 +47,7 @@ data class AnnotationEntryJson(
 }
 
 object JjJsonDecoders {
-    fun decodeLogEntries(objects: List<JsonObject>): List<LogEntryJson> =
+    internal fun decodeLogEntries(objects: List<JsonObject>): List<LogEntryJson> =
         objects.mapNotNull { obj ->
             val commitId = obj["ci"]?.jsonPrimitive?.content ?: return@mapNotNull null
             LogEntryJson(
@@ -61,7 +61,7 @@ object JjJsonDecoders {
             )
         }
 
-    fun decodeTimedCommits(objects: List<JsonObject>): List<TimedCommitJson> =
+    internal fun decodeTimedCommits(objects: List<JsonObject>): List<TimedCommitJson> =
         objects.mapNotNull { obj ->
             val commitId = obj["ci"]?.jsonPrimitive?.content ?: return@mapNotNull null
             TimedCommitJson(
@@ -76,7 +76,7 @@ object JjJsonDecoders {
         return element.jsonArray.map { it.jsonPrimitive.content }
     }
 
-    fun decodeHistoryEntries(objects: List<JsonObject>): List<HistoryEntryJson> =
+    internal fun decodeHistoryEntries(objects: List<JsonObject>): List<HistoryEntryJson> =
         objects.map { obj ->
             HistoryEntryJson(
                 commitId = string(obj, "commitId"),
@@ -88,7 +88,7 @@ object JjJsonDecoders {
             )
         }
 
-    fun decodeAnnotationEntries(objects: List<JsonObject>): List<AnnotationEntryJson> =
+    internal fun decodeAnnotationEntries(objects: List<JsonObject>): List<AnnotationEntryJson> =
         objects.map { obj ->
             AnnotationEntryJson(
                 commitId = string(obj, "commitId"),

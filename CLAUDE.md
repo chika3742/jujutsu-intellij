@@ -19,7 +19,7 @@ IntelliJ Platform Plugin for Jujutsu VCS integration. Built with Kotlin using th
 ./gradlew test
 
 # Run a single test class
-./gradlew test --tests "net.chikach.jujutsuintellij.cli.JjCommandFactoryTest"
+./gradlew test --tests "net.chikach.jujutsuintellij.cli.JjJsonParsingTest"
 
 # Verify plugin compatibility
 ./gradlew verifyPlugin
@@ -36,43 +36,71 @@ Gradle Configuration Cache and Build Cache are both enabled (`gradle.properties`
 
 - `plugin.xml` — declares all extensions, actions, listeners, and dependencies. Every new extension point registration must go here.
 - `JujutsuVcs` — VCS implementation registered as `name="Jujutsu"` in `plugin.xml`. Routes IDE calls to project-level service implementations.
-- `JjRepositoryManager` / `JjRepository` — project-scoped repository registry plus per-root context helpers. Get a repo handle via `JjRepositoryManager.getInstance(project).getRepositoryForRoot(root)` or `getRepositoryForFile(file)`.
-- `JjCommands` — app-level facade for repo-aware `jj` operations. All new `jj` use cases go here.
+- `JjRepositoryManager` / `JjRepository` — project-scoped repository registry. `JjRepository` is the **public use-case API**: working-copy / diff / file / log / bookmark / config / git operations are exposed as methods on it. Get a repo handle via `JjRepositoryManager.getInstance(project).getRepositoryForRoot(root)` or `getRepositoryForFile(file)`.
 - `JjCli` — low-level synchronous process runner for `jj`; handles executable resolution, environment, timeout, stdin, and captured output. Never call from the EDT.
 - `JujutsuBundle` — i18n helper; add strings to `src/main/resources/messages/JujutsuBundle.properties`.
 
-### CLI layer
+### Layered architecture
 
-Three classes form a strict stack:
+Callers should always go through **`JjRepository`** — providers, actions, and UI widgets do not touch the CLI layer directly.
 
-1. **`JjCli`** (app service) — spawns and captures the `jj` process. Sets `NO_COLOR=1` and `JJ_PAGER=` for deterministic output. Resolves the executable via `JujutsuAppSettings.resolvedExecutablePath()`.
-2. **`JjCommandFactory`** (internal object) — constructs `JjCli.Request` values for every known `jj` command shape. Add or change command shapes here.
-3. **`JjCommands`** (app service) — calls `JjCommandFactory` and executes via `JjCli` (or `JjJsonCommand` for JSON output). This is the public API surface; callers never touch `JjCli` or `JjCommandFactory` directly.
+```
+caller (provider / action / UI)
+  → JjRepository (use-case methods, returns repo/model/ domain objects)
+    → JjCommands (internal: typed wrapper, takes JjRepository; builds JjCli.Request inline)
+      → JjCli (subprocess execution)
+```
 
-For commands that produce NDJSON output, `JjJsonCommand` wraps `JjCli` and delegates line-by-line parsing to `JjJsonParser`. Decoded domain objects are defined in `JjJsonDecoders.kt` (`LogEntryJson`, `HistoryEntryJson`, `AnnotationEntryJson`, etc.).
+`JjCommands` and `JjJsonCommand` are marked `@ApiStatus.Internal`; the `*Json` intermediate types in `JjJsonDecoders.kt` are `internal`. The one intentional exception is `JjVersion.detect()`, which calls `JjCommands.version(path)` before any repo is determined.
+
+**`JjRepository` use cases** (in `repo/JjRepository.kt`):
+
+- Working copy: `workingCopyDescription()`, `describe(msg)`, `newChange()`, `commit(msg)` (uses `jj commit`), `abandon(revset)`, `restore(fromRev, paths)`.
+- Diff: `workingCopyChanges()` → `List<JjFileChange>`, `diffSummary(from, to)`.
+- File: `fileHistory(rel)`, `annotateFile(rel, rev?)`, `showFile(rev, rel)`.
+- Log: `recentLog(N)`, `allTimedCommits()`, `logByIds(ids)`.
+- Bookmarks: `listBookmarks()` (uses `jj bookmark list -T <json>`), `bookmarksForLog()`, `createBookmark`, `deleteBookmark`, `setBookmark`.
+- Config: `configGet(key)`, `currentUser()`.
+- Git: `gitFetch(remote?)`, `gitPush(bookmark?, remote?)`.
+
+Mutation methods throw `JjOperationException` on CLI failure; reads return domain objects or `null` for "missing config" / "empty result" cases.
+
+**Adding a new `jj` use case**:
+1. Add a method on `JjCommands` taking `repo: JjRepository` that builds a `JjCli.Request` (via the `request(...)` private helper) and calls `execute(...)` / `executeObjects(...)`.
+2. Add a use-case method on `JjRepository` that maps result/output to a domain type in `repo/model/`.
+
+### Domain model (`repo/model/`)
+
+Public domain types returned from `JjRepository` — `JjLogEntry`, `JjTimedCommit`, `JjHistoryEntry`, `JjAnnotationLine`, `JjFileChange`, `JjBookmark` (with `JjBookmarkRemoteRef`), `JjBookmarkLogRef`, `JjUser`. Callers should depend on these instead of the internal `*Json` decoder records.
 
 ### Template system (`cli/template/`)
 
 jj has no built-in JSON output flag; the plugin builds jj template strings programmatically:
 
-- `JjTemplateExpr.kt` — sealed type hierarchy (`StringExpr`, `IntegerExpr`, `BooleanExpr`, `CommitExpr`, `AnnotationLineExpr`, etc.) with extension functions that render to jj template syntax.
-- `JjJsonTemplate.kt` — `JjJsonValue` types (`obj`, `arr`, `string`, `num`, `bool`) that compose template expressions into JSON-producing jj templates. `JjTemplates.commitJsonLine {}` and `JjTemplates.annotationJsonLine {}` are the main entry points used by providers.
+- `JjTemplateExpr.kt` — sealed type hierarchy (`StringExpr`, `IntegerExpr`, `BooleanExpr`, `CommitExpr`, `CommitRefExpr`, `AnnotationLineExpr`, `ListExpr<T>`, `LambdaExpr<...>`, etc.) with extension functions that render to jj template syntax.
+- `JjJsonTemplate.kt` — `JjJsonValue` types (`obj`, `arr`, `string`, `num`, `bool`, `serialized`) that compose template expressions into JSON-producing jj templates. Three entry points: `JjTemplates.commitJsonLine {}`, `annotationJsonLine {}`, `bookmarkRefJsonLine {}`.
+- `lambda(::commitExpr) { it.commitId() }` builds typed `LambdaExpr` values from Kotlin lambdas. Use with `ListExpr.map(...)` for `.map(|p| ...)`-style jj template expressions.
+- `serialized(list: ListExpr<SerializableExpr>)` emits a JSON array via jj's `json()` function. Used for `parents` → `["<id1>","<id2>"]`. For convenience, `ListExpr<CommitExpr>.commitIds()` maps each parent commit to its `commit_id()`.
 
-Example: `JjTemplates.commitJsonLine { obj { "ci" to string(commitId) } }` produces a jj template string that emits `{"ci":"<escaped-commit-id>"}\n` per commit.
+Example: `JjTemplates.commitJsonLine { obj { "ci" to string(commitId); "p" to serialized(parents.commitIds()) } }` produces a jj template that emits `{"ci":"<id>","p":["<parent1>","<parent2>"]}\n` per commit.
+
+All current templates live as `private val ... by lazy` in `JjRepository.kt`'s companion object — providers do not own templates.
 
 ### VCS provider implementations (`vcs/`)
 
-- **`JjChangeProvider`** — populates Local Changes via `jj diff --summary --from @- --to @`. Synthesizes in-memory unsaved document changes. In co-located repos delegates to `GitIgnoredScanner` for ignored-file coloring.
-- **`JjCheckinEnvironment`** — maps "Commit" to `jj describe -m <msg>` followed by `jj new`.
-- **`JjRollbackEnvironment`** — maps "Revert" to `jj restore --from @- <paths>`.
-- **`JjHistoryProvider`** / **`JjAnnotationProvider`** — file history and blame via `jj log` / `jj file annotate` with JSON templates.
-- **`JjDiffProvider`** / **`JjContentRevision`** / **`JjFileRevision`** — diff support; `JjContentRevision` lazily reads file content at a specific revision via `jj file show`.
+All providers go through `JjRepository`:
+
+- **`JjChangeProvider`** — populates Local Changes via `repo.workingCopyChanges()`. Synthesizes in-memory unsaved document changes. In co-located repos delegates to `GitIgnoredScanner` for ignored-file coloring.
+- **`JjCheckinEnvironment`** — maps "Commit" to `repo.commit(msg)` (one `jj commit -m <msg>` invocation, replacing the prior describe + new pair). Selected files are intentionally ignored; jj auto-tracks all working-copy changes.
+- **`JjRollbackEnvironment`** — maps "Revert" to `repo.restore("@-", paths)`.
+- **`JjHistoryProvider`** / **`JjAnnotationProvider`** — call `repo.fileHistory(rel)` / `repo.annotateFile(rel, rev)`; receive `List<JjHistoryEntry>` / `List<JjAnnotationLine>` directly.
+- **`JjDiffProvider`** / **`JjContentRevision`** / **`JjFileRevision`** — diff support; `JjContentRevision`/`JjFileRevision` lazily call `repo.showFile(rev, rel)` for file content at a specific revision.
 - **`JjGitCoexistence`** — startup activity that detects co-located git+jj roots and redirects the VCS mapping from Git to Jujutsu (unless `enableGitDualMode` is set).
 
 ### UI layer (`ui/`)
 
-- **`JjLogProvider`** — implements `VcsLogProvider` (Git Log tab) using `JjCommands.recentLog` / `allLog` / `logByIds`.
-- **`JjStatusBarWidget`** — status bar entry showing the working-copy description (`@`). Refreshes via `JjWorkingCopyDescription`, which debounces background `jj log -r @ -T description` calls by 200 ms.
+- **`JjLogProvider`** — implements `VcsLogProvider` using `repo.recentLog(N)` / `repo.allTimedCommits()` / `repo.logByIds(ids)` / `repo.bookmarksForLog()` / `repo.currentUser()`.
+- **`JjStatusBarWidget`** — status bar entry showing the working-copy description (`@`). Refreshes via `JjWorkingCopyDescription`, which debounces background `repo.workingCopyDescription()` calls by 200 ms.
 - **`JjRevisionWidget`** — toolbar action added to `MainToolbarLeft`.
 
 ### Settings
