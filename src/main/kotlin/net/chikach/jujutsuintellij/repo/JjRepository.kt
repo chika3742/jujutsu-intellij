@@ -2,12 +2,9 @@ package net.chikach.jujutsuintellij.repo
 
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonPrimitive
+import net.chikach.jujutsuintellij.cli.JjBookmarkRefRow
 import net.chikach.jujutsuintellij.cli.JjCommandResult
 import net.chikach.jujutsuintellij.cli.JjCommands
-import net.chikach.jujutsuintellij.cli.JjJsonDecoders
-import net.chikach.jujutsuintellij.cli.template.*
 import net.chikach.jujutsuintellij.repo.model.*
 import java.io.File
 import java.nio.file.Path
@@ -65,7 +62,7 @@ class JjRepository(
         commands().commit(this, message).orThrow("commit")
     }
 
-    fun abandon(revset: String = "@") {
+    fun abandon(revset: String = WORKING_COPY_REF) {
         commands().abandon(this, revset).orThrow("abandon")
     }
 
@@ -87,16 +84,15 @@ class JjRepository(
 
     // ─── File ───────────────────────────────────────────────────────────────
 
-    fun fileHistory(relativePath: String, revset: String = "::@"): List<JjHistoryEntry> {
+    fun fileHistory(relativePath: String, revset: String = ANCESTORS_OF_WORKING_COPY_REF): List<JjHistoryEntry> {
         val rel = normalizeRelativePath(relativePath)
-        val objects = commands().fileHistory(this, rel, HISTORY_TEMPLATE, revset)
-        return JjJsonDecoders.decodeHistoryEntries(objects).map { it.toModel() }
+        return commands().fileHistory(this, rel, revset)
+            .map { it.copy(description = it.description.trimEnd('\n')) }
     }
 
     fun annotateFile(relativePath: String, revision: String? = null): List<JjAnnotationLine> {
         val rel = normalizeRelativePath(relativePath)
-        val objects = commands().annotateFile(this, rel, ANNOTATION_TEMPLATE, revision)
-        return JjJsonDecoders.decodeAnnotationEntries(objects).map { it.toModel() }
+        return commands().annotateFile(this, rel, revision)
     }
 
     /** Returns the text content of [relativePath] at [revision]. */
@@ -109,20 +105,15 @@ class JjRepository(
 
     // ─── Log ────────────────────────────────────────────────────────────────
 
-    fun recentLog(count: Int): List<JjLogEntry> {
-        val objects = commands().recentLog(this, count, LOG_ENTRY_TEMPLATE)
-        return JjJsonDecoders.decodeLogEntries(objects).map { it.toModel() }
-    }
+    fun recentLog(count: Int): List<JjLogEntry> =
+        commands().recentLog(this, count)
 
-    fun allTimedCommits(): List<JjTimedCommit> {
-        val objects = commands().allLog(this, TIMED_COMMIT_TEMPLATE)
-        return JjJsonDecoders.decodeTimedCommits(objects).map { it.toModel() }
-    }
+    fun allTimedCommits(): List<JjTimedCommit> =
+        commands().allLog(this)
 
     fun logByIds(commitIds: List<String>): List<JjLogEntry> {
         if (commitIds.isEmpty()) return emptyList()
-        val objects = commands().logByIds(this, commitIds, LOG_ENTRY_TEMPLATE)
-        return JjJsonDecoders.decodeLogEntries(objects).map { it.toModel() }
+        return commands().logByIds(this, commitIds)
     }
 
     // ─── Bookmarks ──────────────────────────────────────────────────────────
@@ -131,10 +122,8 @@ class JjRepository(
      * Returns all bookmarks, grouped by name. Each [JjBookmark] carries its (optional) local
      * commit target and zero or more remote refs.
      */
-    fun listBookmarks(): List<JjBookmark> {
-        val objects = commands().bookmarkListJson(this, BOOKMARK_REF_TEMPLATE)
-        return decodeBookmarks(objects)
-    }
+    fun listBookmarks(): List<JjBookmark> =
+        groupBookmarks(commands().bookmarkListJson(this))
 
     /** Flattened (commit, bookmark name) pairs from `local_bookmarks()`. */
     fun bookmarksForLog(): List<JjBookmarkLogRef> {
@@ -143,7 +132,7 @@ class JjRepository(
         return parseBookmarksForLog(result.stdout)
     }
 
-    fun createBookmark(name: String, revision: String = "@") {
+    fun createBookmark(name: String, revision: String = WORKING_COPY_REF) {
         commands().bookmarkCreate(this, name, revision).orThrow("bookmark create")
     }
 
@@ -151,7 +140,7 @@ class JjRepository(
         commands().bookmarkDelete(this, name).orThrow("bookmark delete")
     }
 
-    fun setBookmark(name: String, revision: String = "@") {
+    fun setBookmark(name: String, revision: String = WORKING_COPY_REF) {
         commands().bookmarkSet(this, name, revision).orThrow("bookmark set")
     }
 
@@ -193,103 +182,9 @@ class JjRepository(
     companion object {
         private const val PARENT_REF = "@-"
         private const val WORKING_COPY_REF = "@"
-
-        private val LOG_ENTRY_TEMPLATE: String by lazy {
-            JjTemplates.commitJsonLine {
-                obj {
-                    "ci" to string(commitId)
-                    "ch" to string(changeId)
-                    "p" to serialized(parents.commitIds())
-                    "an" to string(author.name())
-                    "ae" to string(author.email())
-                    "at" to string(author.timestamp())
-                    "d" to string(description)
-                }
-            }
-        }
-
-        private val TIMED_COMMIT_TEMPLATE: String by lazy {
-            JjTemplates.commitJsonLine {
-                obj {
-                    "ci" to string(commitId)
-                    "p" to serialized(parents.commitIds())
-                    "at" to string(author.timestamp())
-                }
-            }
-        }
-
-        private val HISTORY_TEMPLATE: String by lazy {
-            JjTemplates.commitJsonLine {
-                obj {
-                    "commitId" to string(commitId)
-                    "changeId" to string(changeId)
-                    "authorName" to string(author.name())
-                    "authorEmail" to string(author.email())
-                    "timestamp" to string(author.timestamp())
-                    "description" to string(description)
-                }
-            }
-        }
-
-        private val ANNOTATION_TEMPLATE: String by lazy {
-            JjTemplates.annotationJsonLine {
-                obj {
-                    "commitId" to string(commitId)
-                    "changeId" to string(changeId)
-                    "authorName" to string(author.name())
-                    "authorEmail" to string(author.email())
-                    "timestamp" to string(author.timestamp())
-                    "lineNumber" to num(lineNumber)
-                }
-            }
-        }
-
-        private val BOOKMARK_REF_TEMPLATE: String by lazy {
-            JjTemplates.bookmarkRefJsonLine {
-                obj {
-                    "name" to string(name)
-                    "remote" to string(remote)
-                    "commitId" to string(normalTargetCommitId)
-                }
-            }
-        }
+        private const val ANCESTORS_OF_WORKING_COPY_REF = "::@"
     }
 }
-
-// ─── Internal converters: JSON decoders → domain objects ────────────────────
-
-private fun net.chikach.jujutsuintellij.cli.LogEntryJson.toModel(): JjLogEntry =
-    JjLogEntry(
-        commitId = commitId,
-        changeId = changeId,
-        parentIds = parentIds,
-        authorName = authorName,
-        authorEmail = authorEmail,
-        authorTime = authorTime,
-        description = description,
-    )
-
-private fun net.chikach.jujutsuintellij.cli.TimedCommitJson.toModel(): JjTimedCommit =
-    JjTimedCommit(commitId = commitId, parentIds = parentIds, time = time)
-
-private fun net.chikach.jujutsuintellij.cli.HistoryEntryJson.toModel(): JjHistoryEntry =
-    JjHistoryEntry(
-        commitId = commitId,
-        changeId = changeId,
-        authorName = authorName,
-        authorEmail = authorEmail,
-        date = date,
-        description = description,
-    )
-
-private fun net.chikach.jujutsuintellij.cli.AnnotationEntryJson.toModel(): JjAnnotationLine =
-    JjAnnotationLine(
-        commitId = commitId,
-        changeId = changeId,
-        authorName = authorName,
-        authorEmail = authorEmail,
-        date = date,
-    )
 
 // ─── Internal parsers ───────────────────────────────────────────────────────
 
@@ -346,17 +241,15 @@ private fun parseBookmarksForLog(stdout: String): List<JjBookmarkLogRef> =
         }
         .toList()
 
-private fun decodeBookmarks(objects: List<JsonObject>): List<JjBookmark> {
+private fun groupBookmarks(rows: List<JjBookmarkRefRow>): List<JjBookmark> {
     data class Acc(var local: String? = null, val remotes: MutableList<JjBookmarkRemoteRef> = mutableListOf())
     val grouped = LinkedHashMap<String, Acc>()
-    for (obj in objects) {
-        val name = obj["name"]?.jsonPrimitive?.content?.takeIf { it.isNotBlank() } ?: continue
-        val remote = obj["remote"]?.jsonPrimitive?.content.orEmpty()
-        val commitId = obj["commitId"]?.jsonPrimitive?.content.orEmpty()
+    for (row in rows) {
+        val name = row.name.takeIf { it.isNotBlank() } ?: continue
         val acc = grouped.getOrPut(name) { Acc() }
         when {
-            remote.isEmpty() -> if (commitId.isNotEmpty()) acc.local = commitId
-            commitId.isNotEmpty() -> acc.remotes += JjBookmarkRemoteRef(remote, commitId)
+            row.remote.isEmpty() -> if (row.commitId.isNotEmpty()) acc.local = row.commitId
+            row.commitId.isNotEmpty() -> acc.remotes += JjBookmarkRemoteRef(row.remote, row.commitId)
         }
     }
     return grouped.map { (name, acc) -> JjBookmark(name, acc.local, acc.remotes.toList()) }

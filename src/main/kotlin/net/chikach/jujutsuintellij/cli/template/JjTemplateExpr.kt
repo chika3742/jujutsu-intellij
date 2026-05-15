@@ -193,6 +193,10 @@ fun SignatureExpr.email(): StringExpr = RenderedStringExpr(methodCall(this, "ema
 
 fun SignatureExpr.timestamp(): TimestampExpr = RenderedTimestampExpr(methodCall(this, "timestamp"))
 
+/** Renders the timestamp as ISO 8601 / RFC 3339 (`chrono` `%+` format). */
+fun TimestampExpr.iso8601(): StringExpr =
+    RenderedStringExpr(methodCall(this, "format", literal("%+")))
+
 fun AnnotationLineExpr.commit(): CommitExpr = RenderedCommitExpr(methodCall(this, "commit"))
 
 fun AnnotationLineExpr.lineNumber(): IntegerExpr = RenderedIntegerExpr(methodCall(this, "line_number"))

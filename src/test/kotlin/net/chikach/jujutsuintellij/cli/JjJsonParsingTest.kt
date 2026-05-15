@@ -1,5 +1,7 @@
 package net.chikach.jujutsuintellij.cli
 
+import net.chikach.jujutsuintellij.repo.model.JjAnnotationLine
+import net.chikach.jujutsuintellij.repo.model.JjHistoryEntry
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -7,48 +9,42 @@ import kotlin.test.assertFailsWith
 class JjJsonParsingTest {
 
     @Test
-    fun `parses newline-delimited objects`() {
-        val objects = JjJsonParser.parseObjects(
+    fun `parses newline-delimited history entries`() {
+        val entries = JjJsonParser.parseList<JjHistoryEntry>(
             """
-            {"commitId":"abc","changeId":"def","authorName":"Alice","authorEmail":"alice@example.com","timestamp":"2025-01-02 03:04:05 +00:00","description":"hello\n"}
-            {"commitId":"ghi","changeId":"jkl","authorName":"","authorEmail":"bot@example.com","timestamp":"2025-01-02T03:04:05+00:00","description":""}
+            {"commitId":"abc","changeId":"def","authorName":"Alice","authorEmail":"alice@example.com","timestamp":"2025-01-02T03:04:05+00:00","description":"hello\n"}
+            {"commitId":"ghi","changeId":"jkl","authorName":"","authorEmail":"bot@example.com","timestamp":"2025-01-02T03:04:05.123456+09:00","description":""}
             """.trimIndent(),
-            "jj log"
+            "jj log",
         )
-
-        val entries = JjJsonDecoders.decodeHistoryEntries(objects)
 
         assertEquals(2, entries.size)
         assertEquals("abc", entries[0].commitId)
         assertEquals("Alice <alice@example.com>", entries[0].author)
-        assertEquals("hello", entries[0].description)
+        assertEquals("hello\n", entries[0].description)
         assertEquals("bot@example.com", entries[1].author)
     }
 
     @Test
-    fun `rejects non object json lines`() {
+    fun `rejects malformed json lines`() {
         assertFailsWith<JjJsonException> {
-            JjJsonParser.parseObjects("\"not-an-object\"", "jj log")
+            JjJsonParser.parseList<JjHistoryEntry>("\"not-an-object\"", "jj log")
         }
     }
 
     @Test
     fun `parses annotation entries`() {
-        val objects = JjJsonParser.parseObjects(
+        val entries = JjJsonParser.parseList<JjAnnotationLine>(
             """
-            {"commitId":"abc","changeId":"chg1","authorName":"Alice","authorEmail":"alice@example.com","timestamp":"2025-01-02 03:04:05 +00:00","lineNumber":1}
-            {"commitId":"def","changeId":"chg2","authorName":"","authorEmail":"bot@example.com","timestamp":"2025-01-02T03:04:05+00:00","lineNumber":2}
+            {"commitId":"abc","changeId":"chg1","authorName":"Alice","authorEmail":"alice@example.com","timestamp":"2025-01-02T03:04:05+00:00"}
+            {"commitId":"def","changeId":"chg2","authorName":"","authorEmail":"bot@example.com","timestamp":"2025-01-02T03:04:05+00:00"}
             """.trimIndent(),
-            "jj file annotate"
+            "jj file annotate",
         )
-
-        val entries = JjJsonDecoders.decodeAnnotationEntries(objects)
 
         assertEquals(2, entries.size)
         assertEquals("abc", entries[0].commitId)
         assertEquals("Alice <alice@example.com>", entries[0].author)
-        assertEquals(1, entries[0].lineNumber)
         assertEquals("bot@example.com", entries[1].author)
-        assertEquals(2, entries[1].lineNumber)
     }
 }

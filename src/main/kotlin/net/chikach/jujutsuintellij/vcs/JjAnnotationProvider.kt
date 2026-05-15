@@ -8,7 +8,6 @@ import com.intellij.openapi.vcs.annotate.FileAnnotation
 import com.intellij.openapi.vcs.history.VcsFileRevision
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.vcsUtil.VcsUtil
-import net.chikach.jujutsuintellij.cli.JjJsonDecoders
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
 import net.chikach.jujutsuintellij.repo.model.JjAnnotationLine
@@ -55,7 +54,7 @@ class JjAnnotationProvider(private val project: Project) : AnnotationProvider {
                 relativePath = relative,
                 commitId = line.commitId,
                 changeId = line.changeId,
-                author = JjJsonDecoders.formatAuthor(line.authorName, line.authorEmail),
+                author = line.author,
                 date = line.date,
                 message = "",
             )

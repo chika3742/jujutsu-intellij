@@ -2,21 +2,21 @@ package net.chikach.jujutsuintellij.cli
 
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
-import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.Json
 import org.jetbrains.annotations.ApiStatus
 
 @ApiStatus.Internal
 @Service(Service.Level.APP)
 class JjJsonCommand {
 
-    fun executeObjects(request: JjCli.Request): List<JsonObject> {
+    inline fun <reified T> executeJsonList(request: JjCli.Request): List<T> {
         val result = JjCli.getInstance().execute(request)
         if (!result.isSuccess) {
             throw JjJsonException(
                 "${result.commandLine} exited ${result.exitCode}: ${result.stderr.trim()}"
             )
         }
-        return JjJsonParser.parseObjects(result.stdout, result.commandLine)
+        return JjJsonParser.parseList<T>(result.stdout, result.commandLine)
     }
 
     companion object {
@@ -26,28 +26,29 @@ class JjJsonCommand {
 }
 
 object JjJsonParser {
-    private val json = kotlinx.serialization.json.Json {
+    val json = Json {
         ignoreUnknownKeys = true
     }
 
-    fun parseObjects(stdout: String, commandLine: String): List<JsonObject> {
+    inline fun <reified T> parseList(stdout: String, commandLine: String): List<T> {
         if (stdout.isBlank()) return emptyList()
 
-        val objects = ArrayList<JsonObject>()
+        val out = ArrayList<T>()
         stdout.lineSequence().forEachIndexed { index, rawLine ->
             val line = rawLine.removeSuffix("\r")
             if (line.isBlank()) return@forEachIndexed
 
-            val element = try {
-                json.parseToJsonElement(line)
+            val value = try {
+                json.decodeFromString<T>(line)
             } catch (e: Exception) {
-                throw JjJsonException("Malformed JSON from `$commandLine` at line ${index + 1}: $line", e)
+                throw JjJsonException(
+                    "Malformed JSON from `$commandLine` at line ${index + 1}: $line",
+                    e,
+                )
             }
-            val obj = element as? JsonObject
-                ?: throw JjJsonException("Expected JSON object from `$commandLine` at line ${index + 1}")
-            objects += obj
+            out += value
         }
-        return objects
+        return out
     }
 }
 

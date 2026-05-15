@@ -1,13 +1,33 @@
 package net.chikach.jujutsuintellij.repo.model
 
-import java.util.*
+import kotlinx.serialization.Serializable
+import net.chikach.jujutsuintellij.cli.JjDateSerializer
+import net.chikach.jujutsuintellij.cli.template.*
+import java.util.Date
 
+@Serializable
 data class JjLogEntry(
     val commitId: String,
     val changeId: String,
     val parentIds: List<String>,
     val authorName: String,
     val authorEmail: String,
-    val authorTime: Date,
+    @Serializable(with = JjDateSerializer::class) val authorTime: Date,
     val description: String,
-)
+) {
+    companion object {
+        val TEMPLATE: String by lazy {
+            JjTemplates.commitJsonLine {
+                obj {
+                    "commitId" to string(commitId)
+                    "changeId" to string(changeId)
+                    "parentIds" to serialized(parents.commitIds())
+                    "authorName" to string(author.name())
+                    "authorEmail" to string(author.email())
+                    "authorTime" to string(author.timestamp().iso8601())
+                    "description" to string(description)
+                }
+            }
+        }
+    }
+}

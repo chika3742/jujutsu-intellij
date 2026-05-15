@@ -2,8 +2,11 @@ package net.chikach.jujutsuintellij.cli
 
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
-import kotlinx.serialization.json.JsonObject
 import net.chikach.jujutsuintellij.repo.JjRepository
+import net.chikach.jujutsuintellij.repo.model.JjAnnotationLine
+import net.chikach.jujutsuintellij.repo.model.JjHistoryEntry
+import net.chikach.jujutsuintellij.repo.model.JjLogEntry
+import net.chikach.jujutsuintellij.repo.model.JjTimedCommit
 import org.jetbrains.annotations.ApiStatus
 import java.nio.file.Path
 
@@ -29,30 +32,28 @@ class JjCommands {
     fun fileHistory(
         repo: JjRepository,
         relativePath: String,
-        template: String,
         revset: String = DEFAULT_LOG_REVSET,
-    ): List<JsonObject> {
+    ): List<JjHistoryEntry> {
         val rel = repo.normalizeRelativePath(relativePath)
-        return executeObjects(
-            request(repo.rootPathNio, listOf("log", "--no-graph", "-r", revset, "-T", template, "--", rel))
+        return JjJsonCommand.getInstance().executeJsonList(
+            request(repo.rootPathNio, listOf("log", "--no-graph", "-r", revset, "-T", JjHistoryEntry.TEMPLATE, "--", rel))
         )
     }
 
     fun annotateFile(
         repo: JjRepository,
         relativePath: String,
-        template: String,
         revision: String? = null,
-    ): List<JsonObject> {
+    ): List<JjAnnotationLine> {
         val rel = repo.normalizeRelativePath(relativePath)
         val args = buildList {
             add("file")
             add("annotate")
-            add("-T"); add(template)
+            add("-T"); add(JjAnnotationLine.TEMPLATE)
             if (revision != null) { add("-r"); add(revision) }
             add(rel)
         }
-        return executeObjects(request(repo.rootPathNio, args))
+        return JjJsonCommand.getInstance().executeJsonList(request(repo.rootPathNio, args))
     }
 
     fun showFile(
@@ -88,27 +89,24 @@ class JjCommands {
     fun getDescription(repo: JjRepository): JjCommandResult =
         execute(request(repo.rootPathNio, listOf("log", "--no-graph", "-r", "@", "-T", "description")))
 
-    fun recentLog(repo: JjRepository, count: Int, template: String): List<JsonObject> =
-        executeObjects(
-            request(repo.rootPathNio, listOf("log", "--no-graph", "-r", "latest(all(), $count)", "-T", template))
+    fun recentLog(repo: JjRepository, count: Int): List<JjLogEntry> =
+        JjJsonCommand.getInstance().executeJsonList(
+            request(repo.rootPathNio, listOf("log", "--no-graph", "-r", "latest(all(), $count)", "-T", JjLogEntry.TEMPLATE))
         )
 
-    fun allLog(repo: JjRepository, template: String): List<JsonObject> =
-        executeObjects(
-            request(repo.rootPathNio, listOf("log", "--no-graph", "-r", "all()", "-T", template))
+    fun allLog(repo: JjRepository): List<JjTimedCommit> =
+        JjJsonCommand.getInstance().executeJsonList(
+            request(repo.rootPathNio, listOf("log", "--no-graph", "-r", "all()", "-T", JjTimedCommit.TEMPLATE))
         )
 
-    fun logByIds(repo: JjRepository, commitIds: List<String>, template: String): List<JsonObject> =
-        executeObjects(
-            request(repo.rootPathNio, listOf("log", "--no-graph", "-r", commitIds.joinToString("|"), "-T", template))
+    fun logByIds(repo: JjRepository, commitIds: List<String>): List<JjLogEntry> =
+        JjJsonCommand.getInstance().executeJsonList(
+            request(repo.rootPathNio, listOf("log", "--no-graph", "-r", commitIds.joinToString("|"), "-T", JjLogEntry.TEMPLATE))
         )
 
-    fun bookmarkList(repo: JjRepository): JjCommandResult =
-        execute(request(repo.rootPathNio, listOf("bookmark", "list", "--all")))
-
-    fun bookmarkListJson(repo: JjRepository, template: String): List<JsonObject> =
-        executeObjects(
-            request(repo.rootPathNio, listOf("bookmark", "list", "--all-remotes", "-T", template))
+    internal fun bookmarkListJson(repo: JjRepository): List<JjBookmarkRefRow> =
+        JjJsonCommand.getInstance().executeJsonList(
+            request(repo.rootPathNio, listOf("bookmark", "list", "--all-remotes", "-T", JjBookmarkRefRow.TEMPLATE))
         )
 
     fun configGet(repo: JjRepository, key: String): JjCommandResult =
@@ -153,9 +151,6 @@ class JjCommands {
 
     private fun execute(request: JjCli.Request): JjCommandResult =
         JjCli.getInstance().execute(request)
-
-    private fun executeObjects(request: JjCli.Request): List<JsonObject> =
-        JjJsonCommand.getInstance().executeObjects(request)
 
     private fun request(
         workDir: Path,
