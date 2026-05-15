@@ -1,5 +1,7 @@
 package net.chikach.jujutsuintellij.cli.template
 
+import net.chikach.jujutsuintellij.repo.model.JjCommitRef
+
 sealed interface JjTemplateExpr {
     fun render(ctx: RenderContext = RenderContext): String
 }
@@ -181,7 +183,8 @@ fun CommitExpr.author(): SignatureExpr = RenderedSignatureExpr(methodCall(this, 
 
 fun CommitExpr.parents(): ListExpr<CommitExpr> = RenderedListExpr(methodCall(this, "parents"))
 
-fun CommitExpr.localBookmarks(): ListExpr<CommitRefExpr> = RenderedListExpr(methodCall(this, "local_bookmarks"))
+fun CommitExpr.bookmarks(): ListExpr<SerializableTemplateExpr> = RenderedListExpr<SerializableTemplateExpr>(methodCall(this, "bookmarks"))
+    .map(lambda(::commitRefExpr) { it.name() })
 
 /** Maps `parents` to their commit ids. */
 fun ListExpr<CommitExpr>.commitIds(): ListExpr<SerializableTemplateExpr> =
@@ -222,6 +225,7 @@ class CommitScope internal constructor(
     val description: StringExpr get() = self.description()
     val author: SignatureExpr get() = self.author()
     val parents: ListExpr<CommitExpr> get() = self.parents()
+    val bookmarks: ListExpr<SerializableTemplateExpr> get() = self.bookmarks()
 }
 
 class AnnotationScope internal constructor(

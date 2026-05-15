@@ -9,7 +9,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.Consumer
 import com.intellij.vcs.log.*
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
-import net.chikach.jujutsuintellij.repo.model.JjLogEntry
+import net.chikach.jujutsuintellij.repo.model.JjCommit
 import net.chikach.jujutsuintellij.vcs.JujutsuVcs
 
 class JjLogProvider(private val project: Project) : VcsLogProvider {
@@ -40,7 +40,7 @@ class JjLogProvider(private val project: Project) : VcsLogProvider {
                 factory.createTimedCommit(
                     factory.createHash(entry.commitId),
                     entry.parentIds.map { factory.createHash(it) },
-                    entry.time.time,
+                    entry.authorTime.time,
                 )
             )
         }
@@ -98,7 +98,7 @@ class JjLogProvider(private val project: Project) : VcsLogProvider {
 
     override fun getCurrentBranch(root: VirtualFile): String? = null
 
-    private fun JjLogEntry.toCommitMetadata(root: VirtualFile, factory: VcsLogObjectsFactory): VcsCommitMetadata {
+    private fun JjCommit.toCommitMetadata(root: VirtualFile, factory: VcsLogObjectsFactory): VcsCommitMetadata {
         val hash = factory.createHash(commitId)
         val parents = parentIds.map { factory.createHash(it) }
         val subject = description.lines().firstOrNull()?.trim() ?: ""

@@ -5,8 +5,7 @@ import com.intellij.openapi.components.service
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.model.JjAnnotationLine
 import net.chikach.jujutsuintellij.repo.model.JjHistoryEntry
-import net.chikach.jujutsuintellij.repo.model.JjLogEntry
-import net.chikach.jujutsuintellij.repo.model.JjTimedCommit
+import net.chikach.jujutsuintellij.repo.model.JjCommit
 import org.jetbrains.annotations.ApiStatus
 import java.nio.file.Path
 
@@ -89,19 +88,9 @@ class JjCommands {
     fun getDescription(repo: JjRepository): JjCommandResult =
         execute(request(repo.rootPathNio, listOf("log", "--no-graph", "-r", "@", "-T", "description")))
 
-    fun recentLog(repo: JjRepository, count: Int): List<JjLogEntry> =
+    fun log(repo: JjRepository, revset: String): List<JjCommit> =
         JjJsonCommand.getInstance().executeJsonList(
-            request(repo.rootPathNio, listOf("log", "--no-graph", "-r", "latest(all(), $count)", "-T", JjLogEntry.TEMPLATE))
-        )
-
-    fun allLog(repo: JjRepository): List<JjTimedCommit> =
-        JjJsonCommand.getInstance().executeJsonList(
-            request(repo.rootPathNio, listOf("log", "--no-graph", "-r", "all()", "-T", JjTimedCommit.TEMPLATE))
-        )
-
-    fun logByIds(repo: JjRepository, commitIds: List<String>): List<JjLogEntry> =
-        JjJsonCommand.getInstance().executeJsonList(
-            request(repo.rootPathNio, listOf("log", "--no-graph", "-r", commitIds.joinToString("|"), "-T", JjLogEntry.TEMPLATE))
+            request(repo.rootPathNio, listOf("log", "--no-graph", "-r", revset, "-T", JjCommit.TEMPLATE))
         )
 
     internal fun bookmarkListJson(repo: JjRepository): List<JjBookmarkRefRow> =
@@ -139,15 +128,6 @@ class JjCommands {
         }
         return execute(request(repo.rootPathNio, args))
     }
-
-    /** Returns lines of `<commitId>\t<bookmarkName1>\t<bookmarkName2>…` for each commit with local bookmarks. */
-    fun bookmarkCommitsForLog(repo: JjRepository): JjCommandResult =
-        execute(request(repo.rootPathNio, listOf(
-            "log",
-            "--no-graph",
-            "-r", "local_bookmarks()",
-            "-T", "commit_id() ++ \"\\t\" ++ separate(\"\\t\", local_bookmarks()) ++ \"\\n\"",
-        )))
 
     private fun execute(request: JjCli.Request): JjCommandResult =
         JjCli.getInstance().execute(request)

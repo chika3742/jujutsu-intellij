@@ -105,15 +105,15 @@ class JjRepository(
 
     // ─── Log ────────────────────────────────────────────────────────────────
 
-    fun recentLog(count: Int): List<JjLogEntry> =
-        commands().recentLog(this, count)
+    fun recentLog(count: Int): List<JjCommit> =
+        commands().log(this, "latest(all(), $count)")
 
-    fun allTimedCommits(): List<JjTimedCommit> =
-        commands().allLog(this)
+    fun allTimedCommits(): List<JjCommit> =
+        commands().log(this, "all()")
 
-    fun logByIds(commitIds: List<String>): List<JjLogEntry> {
+    fun logByIds(commitIds: List<String>): List<JjCommit> {
         if (commitIds.isEmpty()) return emptyList()
-        return commands().logByIds(this, commitIds)
+        return commands().log(this, commitIds.joinToString("|"))
     }
 
     // ─── Bookmarks ──────────────────────────────────────────────────────────
@@ -127,9 +127,12 @@ class JjRepository(
 
     /** Flattened (commit, bookmark name) pairs from `local_bookmarks()`. */
     fun bookmarksForLog(): List<JjBookmarkLogRef> {
-        val result = commands().bookmarkCommitsForLog(this)
-        if (!result.isSuccess) return emptyList()
-        return parseBookmarksForLog(result.stdout)
+        val commits = commands().log(this, "bookmarks()")
+        return commits.flatMap { commit ->
+            commit.bookmarks.map {
+                JjBookmarkLogRef(commit.commitId, it)
+            }
+        }
     }
 
     fun createBookmark(name: String, revision: String = WORKING_COPY_REF) {

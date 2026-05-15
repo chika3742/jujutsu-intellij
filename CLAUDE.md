@@ -51,7 +51,13 @@ caller (provider / action / UI)
       → JjCli (subprocess execution)
 ```
 
-`JjCommands` and `JjJsonCommand` are marked `@ApiStatus.Internal`; the `*Json` intermediate types in `JjJsonDecoders.kt` are `internal`. The one intentional exception is `JjVersion.detect()`, which calls `JjCommands.version(path)` before any repo is determined.
+`JjCommands` and `JjJsonCommand` are marked `@ApiStatus.Internal`. The one intentional exception to the layering rule is `JjVersion.detect()`, which calls `JjCommands.version(path)` before any repo is determined.
+
+`JjCommands` exposes typed methods that return domain objects directly (e.g. `recentLog(repo, count): List<JjLogEntry>`,
+`fileHistory(repo, rel, revset): List<JjHistoryEntry>`). Templates are not passed in; each command resolves the template
+from the corresponding model's companion object (see "Template system" below). JSON decoding is done by
+`JjJsonCommand.executeJsonList<T>(request)` which is `inline fun <reified T>` and uses
+`kotlinx.serialization` (`Json { ignoreUnknownKeys = true }`).
 
 **`JjRepository` use cases** (in `repo/JjRepository.kt`):
 
@@ -66,12 +72,17 @@ caller (provider / action / UI)
 Mutation methods throw `JjOperationException` on CLI failure; reads return domain objects or `null` for "missing config" / "empty result" cases.
 
 **Adding a new `jj` use case**:
-1. Add a method on `JjCommands` taking `repo: JjRepository` that builds a `JjCli.Request` (via the `request(...)` private helper) and calls `execute(...)` / `executeObjects(...)`.
-2. Add a use-case method on `JjRepository` that maps result/output to a domain type in `repo/model/`.
+1. If the operation returns structured data, define an `@Serializable` domain type in `repo/model/`. Put the corresponding jj template as `companion object { val TEMPLATE: String by lazy { JjTemplates.commitJsonLine { obj { ... } } } }` next to the data class so the JSON shape and the deserialization target stay in one file. Use `@SerialName` if a JSON key has to differ from the Kotlin field name; annotate `Date` fields with `@Serializable(with = JjDateSerializer::class)`.
+2. Add a method on `JjCommands` taking `repo: JjRepository` that builds a `JjCli.Request` (via the `request(...)` private helper) and either calls `execute(...)` (for raw text output) or `JjJsonCommand.getInstance().executeJsonList<YourModel>(request)` (for NDJSON output). For JSON commands, reference `YourModel.TEMPLATE` directly inside the request; do not surface the template as a parameter on `JjCommands`.
+3. Add a use-case method on `JjRepository` that delegates to the new `JjCommands` method and exposes the domain type. Mutation methods should call `.orThrow("operation name")`.
 
 ### Domain model (`repo/model/`)
 
-Public domain types returned from `JjRepository` — `JjLogEntry`, `JjTimedCommit`, `JjHistoryEntry`, `JjAnnotationLine`, `JjFileChange`, `JjBookmark` (with `JjBookmarkRemoteRef`), `JjBookmarkLogRef`, `JjUser`. Callers should depend on these instead of the internal `*Json` decoder records.
+Public domain types returned from `JjRepository` — `JjLogEntry`, `JjTimedCommit`, `JjHistoryEntry`, `JjAnnotationLine`, `JjFileChange`, `JjBookmark` (with `JjBookmarkRemoteRef`), `JjBookmarkLogRef`, `JjUser`.
+
+Types backed by NDJSON output from `jj` are annotated with `kotlinx.serialization` `@Serializable` and carry their own jj template in a `companion object` as `TEMPLATE: String`. JSON keys typically match Kotlin field names; `@SerialName("timestamp")` is used on `JjHistoryEntry.date` / `JjAnnotationLine.date` to match the template. `Date` fields use `@Serializable(with = JjDateSerializer::class)` to decode ISO 8601 strings (jj `Timestamp.format("%+")` output). Author display strings come from the top-level `formatAuthor(authorName, authorEmail)` helper in `repo/model/JjAuthor.kt`, exposed as the `.author` computed property on `JjHistoryEntry` / `JjAnnotationLine`.
+
+For bookmarks, the jj template yields a flat row per `{name, remote, commitId}`; the internal `@Serializable` row type is `cli/JjBookmarkRefRow.kt` and `JjRepository.listBookmarks()` groups them into `JjBookmark` (local + remotes).
 
 ### Template system (`cli/template/`)
 
@@ -81,10 +92,11 @@ jj has no built-in JSON output flag; the plugin builds jj template strings progr
 - `JjJsonTemplate.kt` — `JjJsonValue` types (`obj`, `arr`, `string`, `num`, `bool`, `serialized`) that compose template expressions into JSON-producing jj templates. Three entry points: `JjTemplates.commitJsonLine {}`, `annotationJsonLine {}`, `bookmarkRefJsonLine {}`.
 - `lambda(::commitExpr) { it.commitId() }` builds typed `LambdaExpr` values from Kotlin lambdas. Use with `ListExpr.map(...)` for `.map(|p| ...)`-style jj template expressions.
 - `serialized(list: ListExpr<SerializableExpr>)` emits a JSON array via jj's `json()` function. Used for `parents` → `["<id1>","<id2>"]`. For convenience, `ListExpr<CommitExpr>.commitIds()` maps each parent commit to its `commit_id()`.
+- `TimestampExpr.iso8601()` renders `<ts>.format("%+")` so the JSON value is RFC 3339 / ISO 8601 — `JjDateSerializer` parses this single format with `DateTimeFormatter.ISO_OFFSET_DATE_TIME`.
 
-Example: `JjTemplates.commitJsonLine { obj { "ci" to string(commitId); "p" to serialized(parents.commitIds()) } }` produces a jj template that emits `{"ci":"<id>","p":["<parent1>","<parent2>"]}\n` per commit.
+Example: `JjTemplates.commitJsonLine { obj { "commitId" to string(commitId); "parentIds" to serialized(parents.commitIds()); "authorTime" to string(author.timestamp().iso8601()) } }` produces a jj template that emits one `{"commitId":"<id>","parentIds":["<p1>","<p2>"],"authorTime":"2025-…+09:00"}\n` line per commit.
 
-All current templates live as `private val ... by lazy` in `JjRepository.kt`'s companion object — providers do not own templates.
+Templates are owned by their corresponding `@Serializable` domain types (`JjLogEntry.TEMPLATE`, `JjTimedCommit.TEMPLATE`, `JjHistoryEntry.TEMPLATE`, `JjAnnotationLine.TEMPLATE`, `JjBookmarkRefRow.TEMPLATE`). `JjCommands` references them directly; `JjRepository`, providers, and UI never pass templates around.
 
 ### VCS provider implementations (`vcs/`)
 
