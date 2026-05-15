@@ -8,18 +8,8 @@ import com.intellij.openapi.vcs.history.VcsFileRevision
 import com.intellij.openapi.vcs.history.VcsRevisionNumber
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.text.DateFormatUtil
+import net.chikach.jujutsuintellij.repo.model.JjAnnotationLine
 import java.util.*
-
-/**
- * One annotation record — the jj commit that last touched a given source line.
- */
-data class JjAnnotationLine(
-    val commitId: String,
-    val changeId: String,
-    val authorName: String,
-    val authorEmail: String,
-    val date: Date,
-)
 
 class JjFileAnnotation(
     project: Project,

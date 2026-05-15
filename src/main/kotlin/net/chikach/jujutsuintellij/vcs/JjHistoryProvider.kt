@@ -8,9 +8,6 @@ import com.intellij.openapi.vcs.VcsException
 import com.intellij.openapi.vcs.history.*
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.ui.ColumnInfo
-import net.chikach.jujutsuintellij.cli.JjCommands
-import net.chikach.jujutsuintellij.cli.JjJsonDecoders
-import net.chikach.jujutsuintellij.cli.template.*
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
 import javax.swing.JComponent
@@ -90,16 +87,12 @@ class JjHistoryProvider(private val project: Project) : VcsHistoryProvider {
         filePath: FilePath,
         relative: String,
     ): List<VcsFileRevision> {
-        val records = try {
-            JjCommands.getInstance().fileHistory(
-                repo = repo,
-                relativePath = relative,
-                template = HISTORY_TEMPLATE,
-            )
+        val entries = try {
+            repo.fileHistory(relative)
         } catch (e: Exception) {
             throw VcsException("jj log failed for $relative: ${e.message}", e)
         }
-        return JjJsonDecoders.decodeHistoryEntries(records).map { entry ->
+        return entries.map { entry ->
             JjFileRevision(
                 repo = repo,
                 filePath = filePath,
@@ -125,17 +118,4 @@ class JjHistoryProvider(private val project: Project) : VcsHistoryProvider {
             JjHistorySession(filePath, currentRevisionNumber, revisionList)
     }
 
-    companion object {
-        private val HISTORY_TEMPLATE =
-            JjTemplates.commitJsonLine {
-                obj {
-                    "commitId" to string(commitId)
-                    "changeId" to string(changeId)
-                    "authorName" to string(author.name())
-                    "authorEmail" to string(author.email())
-                    "timestamp" to string(author.timestamp())
-                    "description" to string(description)
-                }
-            }
-    }
 }

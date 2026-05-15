@@ -76,6 +76,12 @@ internal object JjCommandFactory {
             args = listOf("new"),
         )
 
+    fun commit(workDir: Path, message: String): JjCli.Request =
+        request(
+            workDir = workDir,
+            args = listOf("commit", "-m", message),
+        )
+
     fun restore(workDir: Path, fromRevision: String, relativePaths: List<String>): JjCli.Request =
         request(
             workDir = workDir,

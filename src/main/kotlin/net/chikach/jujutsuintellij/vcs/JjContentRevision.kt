@@ -5,8 +5,8 @@ import com.intellij.openapi.vcs.VcsException
 import com.intellij.openapi.vcs.changes.ContentRevision
 import com.intellij.openapi.vcs.history.VcsRevisionNumber
 import com.intellij.vcsUtil.VcsUtil
-import net.chikach.jujutsuintellij.cli.JjCommands
 import net.chikach.jujutsuintellij.model.JjRevisionNumber
+import net.chikach.jujutsuintellij.repo.JjOperationException
 import net.chikach.jujutsuintellij.repo.JjRepository
 
 /**
@@ -25,18 +25,12 @@ class JjContentRevision(
         VcsUtil.getFilePath(repo.resolveRelativePath(normalizedRelative), false)
 
     @Throws(VcsException::class)
-    override fun getContent(): String {
-        val result = try {
-            JjCommands.getInstance().showFile(repo, revision, normalizedRelative)
-        } catch (e: Exception) {
-            throw VcsException("Failed to read $normalizedRelative at $revision: ${e.message}", e)
-        }
-        if (!result.isSuccess) {
-            throw VcsException(
-                "jj file show -r $revision $normalizedRelative exited ${result.exitCode}: ${result.stderr.trim()}"
-            )
-        }
-        return result.stdout
+    override fun getContent(): String = try {
+        repo.showFile(revision, normalizedRelative)
+    } catch (e: JjOperationException) {
+        throw VcsException("jj file show -r $revision $normalizedRelative: ${e.message}", e)
+    } catch (e: Exception) {
+        throw VcsException("Failed to read $normalizedRelative at $revision: ${e.message}", e)
     }
 
     override fun getFile(): FilePath = filePath

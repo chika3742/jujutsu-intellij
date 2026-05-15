@@ -7,7 +7,7 @@ import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vcs.changes.VcsDirtyScopeManager
-import net.chikach.jujutsuintellij.cli.JjCommands
+import net.chikach.jujutsuintellij.repo.JjOperationException
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
 import net.chikach.jujutsuintellij.vcs.JujutsuVcs
 
@@ -20,14 +20,14 @@ class JjPushAction : AnAction() {
         object : Task.Backgroundable(project, "Pushing to Remote") {
             override fun run(indicator: ProgressIndicator) {
                 val repos = JjRepositoryManager.getInstance(project).getAll()
-                val commands = JjCommands.getInstance()
                 val errors = mutableListOf<String>()
 
                 for (repo in repos) {
                     indicator.text = "Pushing…"
-                    val result = commands.gitPush(repo)
-                    if (!result.isSuccess) {
-                        errors += result.stderr.trim().ifEmpty { "exit ${result.exitCode}" }
+                    try {
+                        repo.gitPush()
+                    } catch (e: JjOperationException) {
+                        errors += e.message ?: "jj git push failed"
                     }
                 }
 

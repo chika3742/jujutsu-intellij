@@ -10,7 +10,7 @@ import com.intellij.openapi.vcs.rollback.RollbackEnvironment
 import com.intellij.openapi.vcs.rollback.RollbackProgressListener
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
-import net.chikach.jujutsuintellij.cli.JjCommands
+import net.chikach.jujutsuintellij.repo.JjOperationException
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
 
@@ -47,13 +47,13 @@ class JjRollbackEnvironment(private val project: Project) : RollbackEnvironment 
             revision.file.virtualFile?.let { filesToRefresh += it }
         }
 
-        val commands = JjCommands.getInstance()
         @Suppress("UNCHECKED_CAST")
         val errors = vcsExceptions as MutableList<VcsException>
         for ((repo, paths) in changesByRepo) {
-            val result = commands.restore(repo, "@-", paths)
-            if (!result.isSuccess) {
-                errors += VcsException("jj restore failed: ${result.stderr.trim()}")
+            try {
+                repo.restore("@-", paths)
+            } catch (e: JjOperationException) {
+                errors += VcsException("jj restore failed: ${e.message}", e)
             }
         }
 

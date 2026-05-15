@@ -12,7 +12,7 @@ import com.intellij.openapi.vcs.update.SequentialUpdatesContext
 import com.intellij.openapi.vcs.update.UpdateEnvironment
 import com.intellij.openapi.vcs.update.UpdateSession
 import com.intellij.openapi.vcs.update.UpdatedFiles
-import net.chikach.jujutsuintellij.cli.JjCommands
+import net.chikach.jujutsuintellij.repo.JjOperationException
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
 
 /**
@@ -36,14 +36,14 @@ class JjUpdateEnvironment(private val project: Project) : UpdateEnvironment {
     ): UpdateSession {
         val exceptions = mutableListOf<VcsException>()
         val repos = JjRepositoryManager.getInstance(project).getAll()
-        val commands = JjCommands.getInstance()
 
         for (repo in repos) {
             if (progressIndicator.isCanceled) break
             progressIndicator.text = "Fetching from remote…"
-            val result = commands.gitFetch(repo)
-            if (!result.isSuccess) {
-                exceptions += VcsException("jj git fetch failed: ${result.stderr.trim()}")
+            try {
+                repo.gitFetch()
+            } catch (e: JjOperationException) {
+                exceptions += VcsException("jj git fetch failed: ${e.message}", e)
             }
         }
 

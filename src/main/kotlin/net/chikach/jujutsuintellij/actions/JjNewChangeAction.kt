@@ -8,7 +8,6 @@ import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vcs.changes.VcsDirtyScopeManager
-import net.chikach.jujutsuintellij.cli.JjCommands
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
 import net.chikach.jujutsuintellij.repo.JjWorkingCopyDescription
@@ -25,10 +24,7 @@ class JjNewChangeAction : AnAction() {
 
         object : Task.Backgroundable(project, "Creating New Change") {
             override fun run(indicator: ProgressIndicator) {
-                val result = JjCommands.getInstance().newChange(repo)
-                if (!result.isSuccess) {
-                    throw RuntimeException(result.stderr.trim().ifEmpty { "jj new failed (exit ${result.exitCode})" })
-                }
+                repo.newChange()
                 JjWorkingCopyDescription.getInstance(project).refresh()
                 VcsDirtyScopeManager.getInstance(project).markEverythingDirty()
             }

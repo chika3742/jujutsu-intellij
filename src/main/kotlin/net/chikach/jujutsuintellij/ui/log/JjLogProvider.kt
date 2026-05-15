@@ -8,50 +8,20 @@ import com.intellij.openapi.vcs.changes.Change
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.Consumer
 import com.intellij.vcs.log.*
-import net.chikach.jujutsuintellij.cli.JjCommands
-import net.chikach.jujutsuintellij.cli.JjJsonDecoders
-import net.chikach.jujutsuintellij.cli.LogEntryJson
-import net.chikach.jujutsuintellij.cli.template.*
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
+import net.chikach.jujutsuintellij.repo.model.JjLogEntry
 import net.chikach.jujutsuintellij.vcs.JujutsuVcs
 
 class JjLogProvider(private val project: Project) : VcsLogProvider {
 
     private val refManager = JjLogRefManager()
 
-    private val logEntryTemplate: String by lazy {
-        JjTemplates.commitJsonLine {
-            obj {
-                "ci" to string(commitId)
-                "ch" to string(changeId)
-                "p" to string(serializableTemplateExpr("self.parents().map(|p| p.commit_id()).join(\" \")"))
-                "an" to string(author.name())
-                "ae" to string(author.email())
-                "at" to string(author.timestamp())
-                "d" to string(description)
-            }
-        }
-    }
-
-    private val timedCommitTemplate: String by lazy {
-        JjTemplates.commitJsonLine {
-            obj {
-                "ci" to string(commitId)
-                "p" to string(serializableTemplateExpr("self.parents().map(|p| p.commit_id()).join(\" \")"))
-                "at" to string(author.timestamp())
-            }
-        }
-    }
-
     override fun readFirstBlock(root: VirtualFile, requirements: VcsLogProvider.Requirements): VcsLogProvider.DetailedLogData {
         val repo = JjRepositoryManager.getInstance(project).getRepositoryForRoot(root)
         val factory = project.service<VcsLogObjectsFactory>()
 
-        val count = requirements.commitCount
-        val objects = JjCommands.getInstance().recentLog(repo, count, logEntryTemplate)
-        val entries = JjJsonDecoders.decodeLogEntries(objects)
+        val entries = repo.recentLog(requirements.commitCount)
         val refs = loadBookmarkRefs(root, factory)
-
         val commitsList = entries.map { entry -> entry.toCommitMetadata(root, factory) }
 
         return object : VcsLogProvider.DetailedLogData {
@@ -64,9 +34,8 @@ class JjLogProvider(private val project: Project) : VcsLogProvider {
         val repo = JjRepositoryManager.getInstance(project).getRepositoryForRoot(root)
         val factory = project.service<VcsLogObjectsFactory>()
 
-        val objects = JjCommands.getInstance().allLog(repo, timedCommitTemplate)
         val users = mutableSetOf<VcsUser>()
-        JjJsonDecoders.decodeTimedCommits(objects).forEach { entry ->
+        repo.allTimedCommits().forEach { entry ->
             commitConsumer.consume(
                 factory.createTimedCommit(
                     factory.createHash(entry.commitId),
@@ -88,8 +57,7 @@ class JjLogProvider(private val project: Project) : VcsLogProvider {
         val repo = JjRepositoryManager.getInstance(project).getRepositoryForRoot(root)
         val factory = project.service<VcsLogObjectsFactory>()
 
-        val objects = JjCommands.getInstance().logByIds(repo, hashes, logEntryTemplate)
-        JjJsonDecoders.decodeLogEntries(objects).forEach { entry ->
+        repo.logByIds(hashes).forEach { entry ->
             consumer.consume(entry.toCommitMetadata(root, factory))
         }
     }
@@ -99,8 +67,7 @@ class JjLogProvider(private val project: Project) : VcsLogProvider {
         val repo = JjRepositoryManager.getInstance(project).getRepositoryForRoot(root)
         val factory = project.service<VcsLogObjectsFactory>()
 
-        val objects = JjCommands.getInstance().logByIds(repo, hashes, logEntryTemplate)
-        JjJsonDecoders.decodeLogEntries(objects).forEach { entry ->
+        repo.logByIds(hashes).forEach { entry ->
             val metadata = entry.toCommitMetadata(root, factory)
             commitConsumer.consume(object : VcsFullCommitDetails, VcsCommitMetadata by metadata {
                 override fun getChanges(): Collection<Change> = emptyList()
@@ -121,10 +88,8 @@ class JjLogProvider(private val project: Project) : VcsLogProvider {
     override fun getCurrentUser(root: VirtualFile): VcsUser? {
         val repo = JjRepositoryManager.getInstance(project).getRepositoryForRoot(root)
         val factory = project.service<VcsLogObjectsFactory>()
-        val nameResult = JjCommands.getInstance().configGet(repo, "user.name")
-        val emailResult = JjCommands.getInstance().configGet(repo, "user.email")
-        if (!nameResult.isSuccess) return null
-        return factory.createUser(nameResult.stdout.trim(), emailResult.stdout.trim())
+        val user = repo.currentUser() ?: return null
+        return factory.createUser(user.name, user.email)
     }
 
     override fun getContainingBranches(root: VirtualFile, commitHash: Hash): Collection<String> = emptyList()
@@ -133,7 +98,7 @@ class JjLogProvider(private val project: Project) : VcsLogProvider {
 
     override fun getCurrentBranch(root: VirtualFile): String? = null
 
-    private fun LogEntryJson.toCommitMetadata(root: VirtualFile, factory: VcsLogObjectsFactory): VcsCommitMetadata {
+    private fun JjLogEntry.toCommitMetadata(root: VirtualFile, factory: VcsLogObjectsFactory): VcsCommitMetadata {
         val hash = factory.createHash(commitId)
         val parents = parentIds.map { factory.createHash(it) }
         val subject = description.lines().firstOrNull()?.trim() ?: ""
@@ -147,21 +112,8 @@ class JjLogProvider(private val project: Project) : VcsLogProvider {
 
     private fun loadBookmarkRefs(root: VirtualFile, factory: VcsLogObjectsFactory): List<VcsRef> {
         val repo = JjRepositoryManager.getInstance(project).getRepositoryForRoot(root)
-        val result = JjCommands.getInstance().bookmarkCommitsForLog(repo)
-        if (!result.isSuccess) return emptyList()
-
-        return result.stdout.lineSequence()
-            .filter { it.isNotBlank() }
-            .flatMap { line ->
-                val parts = line.split("\t")
-                if (parts.size < 2) return@flatMap emptySequence()
-                val commitId = parts[0].trim().takeIf { it.isNotBlank() } ?: return@flatMap emptySequence()
-                val hash = factory.createHash(commitId)
-                parts.drop(1).asSequence()
-                    .map { it.trim() }
-                    .filter { it.isNotBlank() }
-                    .map { name -> factory.createRef(hash, name, JjBookmarkRefType, root) }
-            }
-            .toList()
+        return repo.bookmarksForLog().map { ref ->
+            factory.createRef(factory.createHash(ref.commitId), ref.name, JjBookmarkRefType, root)
+        }
     }
 }

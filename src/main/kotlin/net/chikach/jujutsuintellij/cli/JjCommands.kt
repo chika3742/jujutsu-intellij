@@ -74,6 +74,9 @@ class JjCommands {
     fun newChange(repo: JjRepository): JjCommandResult =
         execute(JjCommandFactory.newChange(repo.rootPathNio))
 
+    fun commit(repo: JjRepository, message: String): JjCommandResult =
+        execute(JjCommandFactory.commit(repo.rootPathNio, message))
+
     fun restore(repo: JjRepository, fromRevision: String, relativePaths: List<String>): JjCommandResult =
         execute(JjCommandFactory.restore(repo.rootPathNio, fromRevision, relativePaths))
 

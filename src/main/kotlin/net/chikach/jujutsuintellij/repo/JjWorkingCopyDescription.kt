@@ -8,7 +8,6 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.util.concurrency.AppExecutorUtil
-import net.chikach.jujutsuintellij.cli.JjCommands
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
@@ -56,15 +55,12 @@ class JjWorkingCopyDescription(private val project: Project) : Disposable {
         } ?: return
 
         // Step 2: run jj CLI outside the read action (process execution not allowed inside one).
-        val result = runCatching { JjCommands.getInstance().getDescription(repo) }.getOrNull()
-        if (result != null && result.isSuccess) {
-            val newDesc = result.stdout.trimEnd()
-            if (newDesc != description) {
-                description = newDesc
-                ActivityTracker.getInstance().inc()
-                ApplicationManager.getApplication().invokeLater {
-                    changeListeners.forEach { it.run() }
-                }
+        val newDesc = runCatching { repo.workingCopyDescription() }.getOrNull() ?: return
+        if (newDesc != description) {
+            description = newDesc
+            ActivityTracker.getInstance().inc()
+            ApplicationManager.getApplication().invokeLater {
+                changeListeners.forEach { it.run() }
             }
         }
     }

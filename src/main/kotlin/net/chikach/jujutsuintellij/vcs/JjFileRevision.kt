@@ -5,8 +5,8 @@ import com.intellij.openapi.vcs.RepositoryLocation
 import com.intellij.openapi.vcs.VcsException
 import com.intellij.openapi.vcs.history.VcsFileRevision
 import com.intellij.openapi.vcs.history.VcsRevisionNumber
-import net.chikach.jujutsuintellij.cli.JjCommands
 import net.chikach.jujutsuintellij.model.JjRevisionNumber
+import net.chikach.jujutsuintellij.repo.JjOperationException
 import net.chikach.jujutsuintellij.repo.JjRepository
 import java.util.*
 
@@ -42,16 +42,15 @@ class JjFileRevision(
     override fun getContent(): ByteArray? = loadContent()
 
     override fun loadContent(): ByteArray? {
-        val result = try {
-            JjCommands.getInstance().showFile(repo, commitId, relativePath)
+        val text = try {
+            repo.showFile(commitId, relativePath)
+        } catch (e: JjOperationException) {
+            // File did not exist at that revision — surface as null so diff renders an empty side.
+            return null
         } catch (e: Exception) {
             throw VcsException("Failed to read $relativePath at $commitId: ${e.message}", e)
         }
-        if (!result.isSuccess) {
-            // File did not exist at that revision — surface as null so diff renders an empty side.
-            return null
-        }
-        return result.stdout.toByteArray(Charsets.UTF_8)
+        return text.toByteArray(Charsets.UTF_8)
     }
 
     fun getFilePath(): FilePath = filePath

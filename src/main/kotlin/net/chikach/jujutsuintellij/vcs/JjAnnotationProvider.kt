@@ -8,17 +8,12 @@ import com.intellij.openapi.vcs.annotate.FileAnnotation
 import com.intellij.openapi.vcs.history.VcsFileRevision
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.vcsUtil.VcsUtil
-import net.chikach.jujutsuintellij.cli.JjCommands
 import net.chikach.jujutsuintellij.cli.JjJsonDecoders
-import net.chikach.jujutsuintellij.cli.template.*
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
+import net.chikach.jujutsuintellij.repo.model.JjAnnotationLine
 
-/**
- * Drives IntelliJ's "Annotate with Git Blame" equivalent for jj. Annotation output uses the same
- * JSON-lines pipeline as history so template rendering, parsing, and timestamp decoding stay
- * centralized instead of drifting across multiple per-provider implementations.
- */
+/** Drives IntelliJ's "Annotate with Git Blame" equivalent for jj. */
 @Service(Service.Level.PROJECT)
 class JjAnnotationProvider(private val project: Project) : AnnotationProvider {
 
@@ -32,24 +27,10 @@ class JjAnnotationProvider(private val project: Project) : AnnotationProvider {
         val relative = repo.relativize(file.path)
             ?: throw VcsException("Cannot compute path for ${file.path} inside ${repo.rootPath}")
 
-        val records = try {
-            JjCommands.getInstance().annotateFile(
-                repo = repo,
-                relativePath = relative,
-                template = TEMPLATE,
-                revision = revision?.revisionNumber?.asString(),
-            )
+        val lines = try {
+            repo.annotateFile(relative, revision?.revisionNumber?.asString())
         } catch (e: Exception) {
             throw VcsException("Failed to run jj file annotate on $relative: ${e.message}", e)
-        }
-        val lines = JjJsonDecoders.decodeAnnotationEntries(records).map { entry ->
-            JjAnnotationLine(
-                commitId = entry.commitId,
-                changeId = entry.changeId,
-                authorName = entry.authorName,
-                authorEmail = entry.authorEmail,
-                date = entry.date,
-            )
         }
         val annotatedContent = String(file.contentsToByteArray(), file.charset)
         val revisions = buildRevisionsList(repo, relative, file, lines)
@@ -78,19 +59,6 @@ class JjAnnotationProvider(private val project: Project) : AnnotationProvider {
                 date = line.date,
                 message = "",
             )
-        }
-    }
-
-    companion object {
-        private val TEMPLATE = JjTemplates.annotationJsonLine {
-            obj {
-                "commitId" to string(commitId)
-                "changeId" to string(changeId)
-                "authorName" to string(author.name())
-                "authorEmail" to string(author.email())
-                "timestamp" to string(author.timestamp())
-                "lineNumber" to num(lineNumber)
-            }
         }
     }
 }

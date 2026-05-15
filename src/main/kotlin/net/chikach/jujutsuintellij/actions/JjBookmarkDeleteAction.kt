@@ -13,7 +13,6 @@ import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vcs.changes.VcsDirtyScopeManager
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
-import net.chikach.jujutsuintellij.cli.JjCommands
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
 import java.awt.Dimension
@@ -47,10 +46,7 @@ class JjBookmarkDeleteAction : AnAction() {
 
         object : Task.Backgroundable(project, "Deleting Bookmark") {
             override fun run(indicator: ProgressIndicator) {
-                val result = JjCommands.getInstance().bookmarkDelete(repo, selected)
-                if (!result.isSuccess) {
-                    throw RuntimeException(result.stderr.trim().ifEmpty { "jj bookmark delete failed (exit ${result.exitCode})" })
-                }
+                repo.deleteBookmark(selected)
                 VcsDirtyScopeManager.getInstance(project).markEverythingDirty()
             }
 
@@ -78,10 +74,10 @@ class JjBookmarkDeleteAction : AnAction() {
         var names = emptyList<String>()
         ProgressManager.getInstance().runProcessWithProgressSynchronously(
             {
-                val result = JjCommands.getInstance().bookmarkList(repo)
-                if (result.isSuccess) {
-                    names = parseLocalBookmarkNames(result.stdout)
-                }
+                names = repo.listBookmarks()
+                    .filter { it.localCommitId != null }
+                    .map { it.name }
+                    .sorted()
             },
             "Loading Bookmarks",
             false,
@@ -89,21 +85,6 @@ class JjBookmarkDeleteAction : AnAction() {
         )
         return names
     }
-
-    private fun parseLocalBookmarkNames(output: String): List<String> =
-        output.lineSequence()
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
-            .mapNotNull { line ->
-                val colonIdx = line.indexOf(':')
-                if (colonIdx < 0) return@mapNotNull null
-                val token = line.substring(0, colonIdx)
-                // Skip remote tracking entries like "name@origin"
-                if ('@' in token) null else token
-            }
-            .distinct()
-            .sorted()
-            .toList()
 
     private class BookmarkSelectDialog(project: Project, bookmarks: List<String>) : DialogWrapper(project) {
         private val list = JBList(bookmarks).apply {

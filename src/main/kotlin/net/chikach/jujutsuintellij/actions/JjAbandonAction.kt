@@ -8,7 +8,6 @@ import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vcs.changes.VcsDirtyScopeManager
-import net.chikach.jujutsuintellij.cli.JjCommands
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
 import net.chikach.jujutsuintellij.repo.JjWorkingCopyDescription
@@ -33,10 +32,7 @@ class JjAbandonAction : AnAction() {
 
         object : Task.Backgroundable(project, "Abandoning Change") {
             override fun run(indicator: ProgressIndicator) {
-                val result = JjCommands.getInstance().abandon(repo, "@")
-                if (!result.isSuccess) {
-                    throw RuntimeException(result.stderr.trim().ifEmpty { "jj abandon failed (exit ${result.exitCode})" })
-                }
+                repo.abandon()
                 JjWorkingCopyDescription.getInstance(project).refresh()
                 VcsDirtyScopeManager.getInstance(project).markEverythingDirty()
             }

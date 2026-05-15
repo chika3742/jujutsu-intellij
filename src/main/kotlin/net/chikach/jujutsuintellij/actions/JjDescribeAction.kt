@@ -13,7 +13,6 @@ import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vcs.changes.VcsDirtyScopeManager
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
-import net.chikach.jujutsuintellij.cli.JjCommands
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
 import net.chikach.jujutsuintellij.repo.JjWorkingCopyDescription
@@ -38,10 +37,7 @@ class JjDescribeAction : AnAction() {
 
         object : Task.Backgroundable(project, "Describing Working Copy") {
             override fun run(indicator: ProgressIndicator) {
-                val result = JjCommands.getInstance().describe(repo, newMessage)
-                if (!result.isSuccess) {
-                    throw RuntimeException(result.stderr.trim().ifEmpty { "jj describe failed (exit ${result.exitCode})" })
-                }
+                repo.describe(newMessage)
                 JjWorkingCopyDescription.getInstance(project).refresh()
                 VcsDirtyScopeManager.getInstance(project).markEverythingDirty()
             }
@@ -61,10 +57,7 @@ class JjDescribeAction : AnAction() {
     private fun loadCurrentDescription(project: Project, repo: JjRepository): String {
         var description = ""
         ProgressManager.getInstance().runProcessWithProgressSynchronously(
-            {
-                val result = JjCommands.getInstance().getDescription(repo)
-                if (result.isSuccess) description = result.stdout.trimEnd()
-            },
+            { description = repo.workingCopyDescription() },
             "Loading Current Description",
             false,
             project,

@@ -60,6 +60,11 @@ class JjRepository(
         commands().newChange(this).orThrow("new")
     }
 
+    /** Sets the description on `@` and creates a new working-copy on top. */
+    fun commit(message: String) {
+        commands().commit(this, message).orThrow("commit")
+    }
+
     fun abandon(revset: String = "@") {
         commands().abandon(this, revset).orThrow("abandon")
     }

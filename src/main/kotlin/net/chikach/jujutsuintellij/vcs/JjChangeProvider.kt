@@ -10,9 +10,9 @@ import com.intellij.openapi.vcs.FileStatus
 import com.intellij.openapi.vcs.changes.*
 import com.intellij.vcsUtil.VcsUtil
 import net.chikach.jujutsuintellij.cli.GitIgnoredScanner
-import net.chikach.jujutsuintellij.cli.JjCommands
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
+import net.chikach.jujutsuintellij.repo.model.JjFileChange
 import java.io.File
 
 /**
@@ -56,26 +56,38 @@ class JjChangeProvider(private val project: Project) : ChangeProvider {
         progress: ProgressIndicator,
         processedPaths: MutableSet<FilePath>,
     ) {
-        val result = try {
-            JjCommands.getInstance().diffSummary(repo, PARENT_REF, WORKING_COPY_REF)
+        val changes = try {
+            repo.workingCopyChanges()
         } catch (e: Exception) {
             LOG.warn("jj diff failed in ${repo.rootPath}", e)
             return
         }
 
-        if (!result.isSuccess) {
-            LOG.warn("jj diff exit=${result.exitCode} stderr=${result.stderr.trim()}")
-            return
-        }
-
-        for (rawLine in result.stdout.lineSequence()) {
+        for (change in changes) {
             progress.checkCanceled()
-            val line = rawLine.removeSuffix("\r")
-            if (line.isBlank()) continue
-            parseLine(line, repo, builder, processedPaths)
+            reportChange(change, repo, builder, processedPaths)
         }
 
         reportIgnoredFiles(repo, builder, progress, processedPaths)
+    }
+
+    private fun reportChange(
+        change: JjFileChange,
+        repo: JjRepository,
+        builder: ChangelistBuilder,
+        processedPaths: MutableSet<FilePath>,
+    ) {
+        when (change.status) {
+            JjFileChange.Status.ADDED -> reportAdded(repo, change.path, builder, processedPaths)
+            JjFileChange.Status.MODIFIED -> reportModified(repo, change.path, builder, processedPaths)
+            JjFileChange.Status.DELETED -> reportDeleted(repo, change.path, builder, processedPaths)
+            JjFileChange.Status.RENAMED -> reportRenameOrCopy(
+                repo, change.sourcePath!!, change.path, builder, processedPaths, isCopy = false,
+            )
+            JjFileChange.Status.COPIED -> reportRenameOrCopy(
+                repo, change.sourcePath!!, change.path, builder, processedPaths, isCopy = true,
+            )
+        }
     }
 
     /**
@@ -100,26 +112,6 @@ class JjChangeProvider(private val project: Project) : ChangeProvider {
             val filePath = VcsUtil.getFilePath(file, file.isDirectory)
             if (!processedPaths.add(filePath)) continue
             builder.processIgnoredFile(filePath)
-        }
-    }
-
-    private fun parseLine(
-        line: String,
-        repo: JjRepository,
-        builder: ChangelistBuilder,
-        processedPaths: MutableSet<FilePath>,
-    ) {
-        if (line.length < 3) return
-        val status = line[0]
-        val body = line.substring(2)
-
-        when (status) {
-            'A' -> reportAdded(repo, body, builder, processedPaths)
-            'M' -> reportModified(repo, body, builder, processedPaths)
-            'D' -> reportDeleted(repo, body, builder, processedPaths)
-            'R' -> reportRenameOrCopy(repo, body, builder, processedPaths, isCopy = false)
-            'C' -> reportRenameOrCopy(repo, body, builder, processedPaths, isCopy = true)
-            else -> if (LOG.isDebugEnabled) LOG.debug("Unknown jj diff status '$status' in: $line")
         }
     }
 
@@ -159,15 +151,12 @@ class JjChangeProvider(private val project: Project) : ChangeProvider {
 
     private fun reportRenameOrCopy(
         repo: JjRepository,
-        body: String,
+        oldRelative: String,
+        newRelative: String,
         builder: ChangelistBuilder,
         processedPaths: MutableSet<FilePath>,
         isCopy: Boolean,
     ) {
-        val (oldRelative, newRelative) = parseRenameBody(body) ?: run {
-            if (LOG.isDebugEnabled) LOG.debug("Could not parse rename/copy body: $body")
-            return
-        }
         val before = JjContentRevision(repo, oldRelative, PARENT_REF)
         val (newFilePath, after) = currentContent(repo, newRelative)
         processedPaths += before.file
@@ -178,26 +167,6 @@ class JjChangeProvider(private val project: Project) : ChangeProvider {
             Change(before, after, if (isCopy) FileStatus.ADDED else FileStatus.MODIFIED),
             JujutsuVcs.KEY,
         )
-    }
-
-    /**
-     * jj renders renames and copies as one of:
-     *   `prefix/{old => new}`  (common prefix factored out)
-     *   `{old => new}`          (no common prefix)
-     *   `old => new`            (older versions, unlikely)
-     */
-    private fun parseRenameBody(body: String): Pair<String, String>? {
-        BRACE_RENAME.matchEntire(body)?.let { match ->
-            val prefix = match.groupValues[1]
-            val oldLeaf = match.groupValues[2]
-            val newLeaf = match.groupValues[3]
-            return (prefix + oldLeaf) to (prefix + newLeaf)
-        }
-        val arrow = body.indexOf(ARROW)
-        if (arrow > 0) {
-            return body.substring(0, arrow) to body.substring(arrow + ARROW.length)
-        }
-        return null
     }
 
     private fun currentContent(repo: JjRepository, relative: String): Pair<FilePath, CurrentContentRevision> {
@@ -243,8 +212,5 @@ class JjChangeProvider(private val project: Project) : ChangeProvider {
     companion object {
         private val LOG = logger<JjChangeProvider>()
         private const val PARENT_REF = "@-"
-        private const val WORKING_COPY_REF = "@"
-        private const val ARROW = " => "
-        private val BRACE_RENAME = Regex("""^(.*?)\{(.*?) => (.*?)\}$""")
     }
 }

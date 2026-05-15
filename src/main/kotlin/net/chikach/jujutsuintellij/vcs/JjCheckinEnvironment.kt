@@ -9,17 +9,13 @@ import com.intellij.openapi.vcs.changes.CommitContext
 import com.intellij.openapi.vcs.changes.VcsDirtyScopeManager
 import com.intellij.openapi.vcs.checkin.CheckinEnvironment
 import com.intellij.openapi.vfs.VirtualFile
-import net.chikach.jujutsuintellij.cli.JjCommands
+import net.chikach.jujutsuintellij.repo.JjOperationException
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
 import net.chikach.jujutsuintellij.repo.JjWorkingCopyDescription
 
 /**
- * Maps IntelliJ's "Commit" action onto jj's describe-then-new workflow.
- *
- * Clicking "Commit" in the Commit tool window calls [commit], which:
- *   1. Runs `jj describe -m <message>` to set the description on the current working-copy commit `@`.
- *   2. Runs `jj new` to open a fresh working copy, mirroring the git post-commit state.
+ * Maps IntelliJ's "Commit" action onto `jj commit -m <message>`.
  *
  * File selection in the Commit tool window is intentionally ignored: jj auto-tracks all working-copy
  * changes into `@`, so partial-file commits require `jj split` (a Phase-6 feature).
@@ -53,17 +49,12 @@ class JjCheckinEnvironment(private val project: Project) : CheckinEnvironment {
         }
 
         val errors = mutableListOf<VcsException>()
-        val commands = JjCommands.getInstance()
 
         for (repo in repos) {
-            val describeResult = commands.describe(repo, commitMessage)
-            if (!describeResult.isSuccess) {
-                errors += VcsException("jj describe failed: ${describeResult.stderr.trim()}")
-                continue
-            }
-            val newResult = commands.newChange(repo)
-            if (!newResult.isSuccess) {
-                errors += VcsException("jj new failed: ${newResult.stderr.trim()}")
+            try {
+                repo.commit(commitMessage)
+            } catch (e: JjOperationException) {
+                errors += VcsException("jj commit failed: ${e.message}", e)
             }
         }
 
