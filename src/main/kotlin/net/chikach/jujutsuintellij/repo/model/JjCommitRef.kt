@@ -1,14 +1,7 @@
 package net.chikach.jujutsuintellij.repo.model
 
 import kotlinx.serialization.Serializable
-import net.chikach.jujutsuintellij.cli.template.JjTemplates
-import net.chikach.jujutsuintellij.cli.template.name
-import net.chikach.jujutsuintellij.cli.template.normalTargetCommitIdJson
-import net.chikach.jujutsuintellij.cli.template.obj
-import net.chikach.jujutsuintellij.cli.template.rawJson
-import net.chikach.jujutsuintellij.cli.template.remote
-import net.chikach.jujutsuintellij.cli.template.serialized
-import net.chikach.jujutsuintellij.cli.template.string
+import net.chikach.jujutsuintellij.cli.template.*
 
 /**
  * Decoded row from a jj `CommitRef` template (bookmark / tag).

@@ -123,6 +123,9 @@ class JjRepository(
     fun listBookmarks(revset: String? = null): List<JjCommitRef> =
         commands().bookmarkList(this, revset)
 
+    fun listBookmarksByCommitId(commitId: String): List<JjCommitRef> =
+        listBookmarks("descendants(${commitId})")
+
     fun createBookmark(name: String, revision: String = WORKING_COPY_REF) {
         commands().bookmarkCreate(this, name, revision).orThrow("bookmark create")
     }

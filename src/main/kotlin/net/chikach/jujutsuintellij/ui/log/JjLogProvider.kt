@@ -92,7 +92,10 @@ class JjLogProvider(private val project: Project) : VcsLogProvider {
         return factory.createUser(user.name, user.email)
     }
 
-    override fun getContainingBranches(root: VirtualFile, commitHash: Hash): Collection<String> = emptyList()
+    override fun getContainingBranches(root: VirtualFile, commitHash: Hash): Collection<String> {
+        val repo = JjRepositoryManager.getInstance(project).getRepositoryForRoot(root)
+        return repo.listBookmarksByCommitId(commitHash.asString()).map { it.name }
+    }
 
     override fun <T> getPropertyValue(property: VcsLogProperties.VcsLogProperty<T>): T? = null
 
