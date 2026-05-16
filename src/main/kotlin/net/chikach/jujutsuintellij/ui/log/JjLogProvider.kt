@@ -101,11 +101,17 @@ class JjLogProvider(private val project: Project) : VcsLogProvider {
     private fun JjCommit.toCommitMetadata(root: VirtualFile, factory: VcsLogObjectsFactory): VcsCommitMetadata {
         val hash = factory.createHash(commitId)
         val parents = parentIds.map { factory.createHash(it) }
-        val subject = description.lines().firstOrNull()?.trim() ?: ""
+        val placeholder = when {
+            isRoot -> ROOT_PLACEHOLDER
+            description.isBlank() -> NO_DESCRIPTION_PLACEHOLDER
+            else -> null
+        }
+        val subject = placeholder ?: (description.lines().firstOrNull()?.trim() ?: "")
+        val message = placeholder ?: description.trimEnd('\n')
         return factory.createCommitMetadata(
             hash, parents, authorTime.time, root,
             subject, authorName, authorEmail,
-            description.trimEnd('\n'),
+            message,
             authorName, authorEmail, authorTime.time,
         )
     }
@@ -115,5 +121,10 @@ class JjLogProvider(private val project: Project) : VcsLogProvider {
         return repo.bookmarksForLog().map { ref ->
             factory.createRef(factory.createHash(ref.commitId), ref.name, JjBookmarkRefType, root)
         }
+    }
+
+    companion object {
+        const val NO_DESCRIPTION_PLACEHOLDER = "<no description set>"
+        const val ROOT_PLACEHOLDER = "<root>"
     }
 }

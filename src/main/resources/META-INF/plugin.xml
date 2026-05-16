@@ -38,6 +38,7 @@
         <vcs.commitMessageProvider implementation="net.chikach.jujutsuintellij.vcs.JjCommitMessageProvider"/>
 
         <logProvider implementation="net.chikach.jujutsuintellij.ui.log.JjLogProvider"/>
+        <logHighlighterFactory implementation="net.chikach.jujutsuintellij.ui.log.JjPlaceholderMessageHighlighter$Factory"/>
 
         <statusBarWidgetFactory id="jj.working.copy"
                                 implementation="net.chikach.jujutsuintellij.ui.statusbar.JjStatusBarWidgetFactory"/>
