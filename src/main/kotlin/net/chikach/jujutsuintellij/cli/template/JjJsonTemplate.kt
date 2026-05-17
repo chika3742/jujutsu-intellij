@@ -91,14 +91,14 @@ fun serialized(value: SerializableExpr): JjJsonValue = JsonSerializedValue(value
 fun serialized(list: ListExpr<SerializableExpr>): JjJsonValue = JsonSerializedListValue(list)
 
 object JjTemplates {
-    fun commitJsonLine(builder: CommitScope.() -> JjJsonValue): String =
-        renderJsonLine(JjTemplateScopes.commit().builder())
+    fun commitJsonLine(builder: CommitExpr.() -> JjJsonValue): String =
+        renderJsonLine(commitExpr("self").builder())
 
-    fun annotationJsonLine(builder: AnnotationScope.() -> JjJsonValue): String =
-        renderJsonLine(JjTemplateScopes.annotation().builder())
+    fun annotationJsonLine(builder: AnnotationLineExpr.() -> JjJsonValue): String =
+        renderJsonLine(annotationLineExpr("self").builder())
 
-    fun bookmarkRefJsonLine(builder: BookmarkRefScope.() -> JjJsonValue): String =
-        renderJsonLine(JjTemplateScopes.bookmarkRef().builder())
+    fun bookmarkRefJsonLine(builder: CommitRefExpr.() -> JjJsonValue): String =
+        renderJsonLine(commitRefExpr("self").builder())
 
     private fun renderJsonLine(value: JjJsonValue): String =
         concatenate(listOf(value.render(), RenderContext.quoteString("\n")))

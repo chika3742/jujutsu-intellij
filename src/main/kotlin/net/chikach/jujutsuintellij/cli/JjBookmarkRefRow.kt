@@ -19,9 +19,9 @@ internal data class JjBookmarkRefRow(
         val TEMPLATE: String by lazy {
             JjTemplates.bookmarkRefJsonLine {
                 obj {
-                    "name" to string(name)
-                    "remote" to string(remote)
-                    "commitId" to string(normalTargetCommitId)
+                    "name" to string(name())
+                    "remote" to string(remote())
+                    "commitId" to string(normalTargetCommitId())
                 }
             }
         }

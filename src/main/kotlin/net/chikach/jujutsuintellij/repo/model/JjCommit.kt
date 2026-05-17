@@ -21,15 +21,15 @@ data class JjCommit(
         val TEMPLATE: String by lazy {
             JjTemplates.commitJsonLine {
                 obj {
-                    "commitId" to string(commitId)
-                    "changeId" to string(changeId)
-                    "parentIds" to serialized(parents.commitIds())
-                    "authorName" to string(author.name())
-                    "authorEmail" to string(author.email())
-                    "authorTime" to string(author.timestamp().iso8601())
-                    "description" to string(description)
-                    "bookmarks" to serialized(bookmarks)
-                    "isRoot" to bool(root)
+                    "commitId" to string(commitId())
+                    "changeId" to string(changeId())
+                    "parentIds" to serialized(parents().commitIds())
+                    "authorName" to string(author().name())
+                    "authorEmail" to string(author().email())
+                    "authorTime" to string(author().timestamp().iso8601())
+                    "description" to string(description())
+                    "bookmarks" to serialized(bookmarks())
+                    "isRoot" to bool(root())
                 }
             }
         }

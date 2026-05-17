@@ -24,12 +24,12 @@ data class JjHistoryEntry(
         val TEMPLATE: String by lazy {
             JjTemplates.commitJsonLine {
                 obj {
-                    "commitId" to string(commitId)
-                    "changeId" to string(changeId)
-                    "authorName" to string(author.name())
-                    "authorEmail" to string(author.email())
-                    "timestamp" to string(author.timestamp().iso8601())
-                    "description" to string(description)
+                    "commitId" to string(commitId())
+                    "changeId" to string(changeId())
+                    "authorName" to string(author().name())
+                    "authorEmail" to string(author().email())
+                    "timestamp" to string(author().timestamp().iso8601())
+                    "description" to string(description())
                 }
             }
         }

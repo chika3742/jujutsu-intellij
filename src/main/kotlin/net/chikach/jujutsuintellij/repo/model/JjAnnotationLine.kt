@@ -27,11 +27,11 @@ data class JjAnnotationLine(
         val TEMPLATE: String by lazy {
             JjTemplates.annotationJsonLine {
                 obj {
-                    "commitId" to string(commitId)
-                    "changeId" to string(changeId)
-                    "authorName" to string(author.name())
-                    "authorEmail" to string(author.email())
-                    "timestamp" to string(author.timestamp().iso8601())
+                    "commitId" to string(commit().commitId())
+                    "changeId" to string(commit().changeId())
+                    "authorName" to string(commit().author().name())
+                    "authorEmail" to string(commit().author().email())
+                    "timestamp" to string(commit().author().timestamp().iso8601())
                 }
             }
         }
