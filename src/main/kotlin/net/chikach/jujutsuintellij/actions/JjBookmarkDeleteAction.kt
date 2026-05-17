@@ -74,8 +74,7 @@ class JjBookmarkDeleteAction : AnAction() {
         var names = emptyList<String>()
         ProgressManager.getInstance().runProcessWithProgressSynchronously(
             {
-                names = repo.listBookmarks()
-                    .filter { it.localCommitId != null }
+                names = repo.listBookmarks(revset = "bookmarks()")
                     .map { it.name }
                     .sorted()
             },

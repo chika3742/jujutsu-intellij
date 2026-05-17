@@ -2,7 +2,6 @@ package net.chikach.jujutsuintellij.repo
 
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
-import net.chikach.jujutsuintellij.cli.JjBookmarkRefRow
 import net.chikach.jujutsuintellij.cli.JjCommandResult
 import net.chikach.jujutsuintellij.cli.JjCommands
 import net.chikach.jujutsuintellij.repo.model.*
@@ -119,21 +118,10 @@ class JjRepository(
     // ─── Bookmarks ──────────────────────────────────────────────────────────
 
     /**
-     * Returns all bookmarks, grouped by name. Each [JjBookmark] carries its (optional) local
-     * commit target and zero or more remote refs.
+     * Returns all bookmark / tag refs as one [JjCommitRef] per (name, remote?) pair.
      */
-    fun listBookmarks(): List<JjBookmark> =
-        groupBookmarks(commands().bookmarkListJson(this))
-
-    /** Flattened (commit, bookmark name) pairs from `local_bookmarks()`. */
-    fun bookmarksForLog(): List<JjBookmarkLogRef> {
-        val commits = commands().log(this, "bookmarks()")
-        return commits.flatMap { commit ->
-            commit.bookmarks.map {
-                JjBookmarkLogRef(commit.commitId, it)
-            }
-        }
-    }
+    fun listBookmarks(revset: String? = null): List<JjCommitRef> =
+        commands().bookmarkList(this, revset)
 
     fun createBookmark(name: String, revision: String = WORKING_COPY_REF) {
         commands().bookmarkCreate(this, name, revision).orThrow("bookmark create")
@@ -230,30 +218,3 @@ private fun parseRenameBody(body: String, brace: Regex, arrow: String): Pair<Str
     return null
 }
 
-private fun parseBookmarksForLog(stdout: String): List<JjBookmarkLogRef> =
-    stdout.lineSequence()
-        .filter { it.isNotBlank() }
-        .flatMap { line ->
-            val parts = line.split("\t")
-            if (parts.size < 2) return@flatMap emptySequence()
-            val commitId = parts[0].trim().takeIf { it.isNotBlank() } ?: return@flatMap emptySequence()
-            parts.drop(1).asSequence()
-                .map { it.trim() }
-                .filter { it.isNotBlank() }
-                .map { name -> JjBookmarkLogRef(commitId, name) }
-        }
-        .toList()
-
-private fun groupBookmarks(rows: List<JjBookmarkRefRow>): List<JjBookmark> {
-    data class Acc(var local: String? = null, val remotes: MutableList<JjBookmarkRemoteRef> = mutableListOf())
-    val grouped = LinkedHashMap<String, Acc>()
-    for (row in rows) {
-        val name = row.name.takeIf { it.isNotBlank() } ?: continue
-        val acc = grouped.getOrPut(name) { Acc() }
-        when {
-            row.remote.isEmpty() -> if (row.commitId.isNotEmpty()) acc.local = row.commitId
-            row.commitId.isNotEmpty() -> acc.remotes += JjBookmarkRemoteRef(row.remote, row.commitId)
-        }
-    }
-    return grouped.map { (name, acc) -> JjBookmark(name, acc.local, acc.remotes.toList()) }
-}

@@ -90,6 +90,17 @@ fun serialized(value: SerializableExpr): JjJsonValue = JsonSerializedValue(value
 /** Emits a JSON array by serializing the list with jj's `json()` function. */
 fun serialized(list: ListExpr<SerializableExpr>): JjJsonValue = JsonSerializedListValue(list)
 
+/**
+ * Embeds [expr]'s output directly as the JSON value, with no quoting or escaping.
+ * Use for jj-template expressions that already produce a syntactically valid JSON fragment
+ * (e.g. an `if` that emits either a quoted string or the literal `null`).
+ */
+fun rawJson(expr: TemplateExpr): JjJsonValue = JsonRawValue(expr)
+
+private data class JsonRawValue(private val expr: TemplateExpr) : JjJsonValue {
+    override fun render(ctx: RenderContext): String = expr.render(ctx)
+}
+
 object JjTemplates {
     fun commitJsonLine(builder: CommitExpr.() -> JjJsonValue): String =
         renderJsonLine(commitExpr("self").builder())
@@ -97,7 +108,7 @@ object JjTemplates {
     fun annotationJsonLine(builder: AnnotationLineExpr.() -> JjJsonValue): String =
         renderJsonLine(annotationLineExpr("self").builder())
 
-    fun bookmarkRefJsonLine(builder: CommitRefExpr.() -> JjJsonValue): String =
+    fun commitRefJsonLine(builder: CommitRefExpr.() -> JjJsonValue): String =
         renderJsonLine(commitRefExpr("self").builder())
 
     private fun renderJsonLine(value: JjJsonValue): String =

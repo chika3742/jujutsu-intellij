@@ -4,8 +4,9 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.model.JjAnnotationLine
-import net.chikach.jujutsuintellij.repo.model.JjHistoryEntry
 import net.chikach.jujutsuintellij.repo.model.JjCommit
+import net.chikach.jujutsuintellij.repo.model.JjCommitRef
+import net.chikach.jujutsuintellij.repo.model.JjHistoryEntry
 import org.jetbrains.annotations.ApiStatus
 import java.nio.file.Path
 
@@ -93,10 +94,15 @@ class JjCommands {
             request(repo.rootPathNio, listOf("log", "--no-graph", "-r", revset, "-T", JjCommit.TEMPLATE))
         )
 
-    internal fun bookmarkListJson(repo: JjRepository): List<JjBookmarkRefRow> =
-        JjJsonCommand.getInstance().executeJsonList(
-            request(repo.rootPathNio, listOf("bookmark", "list", "--all-remotes", "-T", JjBookmarkRefRow.TEMPLATE))
-        )
+    fun bookmarkList(repo: JjRepository, revset: String? = null): List<JjCommitRef> {
+        val args = buildList {
+            add("bookmark")
+            add("list")
+            if (revset != null) { add("-r"); add(revset) }
+            add("-T"); add(JjCommitRef.TEMPLATE)
+        }
+        return JjJsonCommand.getInstance().executeJsonList(request(repo.rootPathNio, args))
+    }
 
     fun configGet(repo: JjRepository, key: String): JjCommandResult =
         execute(request(repo.rootPathNio, listOf("config", "get", key), timeoutMs = VERSION_TIMEOUT_MS))

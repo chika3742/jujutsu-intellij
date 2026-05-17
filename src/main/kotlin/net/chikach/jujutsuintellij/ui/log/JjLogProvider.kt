@@ -118,9 +118,11 @@ class JjLogProvider(private val project: Project) : VcsLogProvider {
 
     private fun loadBookmarkRefs(root: VirtualFile, factory: VcsLogObjectsFactory): List<VcsRef> {
         val repo = JjRepositoryManager.getInstance(project).getRepositoryForRoot(root)
-        return repo.bookmarksForLog().map { ref ->
-            factory.createRef(factory.createHash(ref.commitId), ref.name, JjBookmarkRefType, root)
-        }
+        return repo.listBookmarks(revset = "bookmarks()")
+            .mapNotNull { ref ->
+                val commitId = ref.commitId ?: return@mapNotNull null
+                factory.createRef(factory.createHash(commitId), ref.name, JjBookmarkRefType, root)
+            }
     }
 
     companion object {

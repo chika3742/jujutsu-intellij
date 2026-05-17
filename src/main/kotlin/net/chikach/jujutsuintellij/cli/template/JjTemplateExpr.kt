@@ -209,10 +209,13 @@ fun CommitRefExpr.name(): StringExpr = RenderedStringExpr(methodCall(this, "name
 fun CommitRefExpr.remote(): StringExpr = RenderedStringExpr(methodCall(this, "remote"))
 
 /**
- * Renders the commit id of `normal_target()` when present, or an empty string otherwise.
- * `normal_target()` is `Option<Commit>`, which is empty during a bookmark conflict.
+ * Renders the commit id of `normal_target()` as a JSON value: a quoted commit id when present,
+ * or the literal `null` when the ref is in a conflicted state (no normal target).
+ * Pair with [rawJson] to embed in a JSON object.
  */
-fun CommitRefExpr.normalTargetCommitId(): StringExpr {
+fun CommitRefExpr.normalTargetCommitIdJson(): TemplateExpr {
     val src = render()
-    return RenderedStringExpr("if($src.normal_target(), $src.normal_target().commit_id(), \"\")")
+    return templateExpr(
+        "if($src.normal_target(), json($src.normal_target().commit_id()), \"null\")"
+    )
 }
