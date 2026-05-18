@@ -15,7 +15,7 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
-import net.chikach.jujutsuintellij.repo.JjWorkingCopyDescription
+import net.chikach.jujutsuintellij.repo.JjWorkingCopyCache
 import java.awt.Dimension
 import javax.swing.JComponent
 
@@ -38,7 +38,7 @@ class JjDescribeAction : AnAction() {
         object : Task.Backgroundable(project, "Describing Working Copy") {
             override fun run(indicator: ProgressIndicator) {
                 repo.describe(newMessage)
-                JjWorkingCopyDescription.getInstance(project).refresh()
+                JjWorkingCopyCache.getInstance(project).refresh()
                 VcsDirtyScopeManager.getInstance(project).markEverythingDirty()
             }
 

@@ -24,14 +24,16 @@ import net.chikach.jujutsuintellij.repo.JjRepositoryManager
 @Service(Service.Level.PROJECT)
 class JjDiffProvider(private val project: Project) : DiffProvider {
 
+    private val parentRevision = JjRevisionNumber(JjRepository.FIRST_PARENT_REF)
+
     override fun getCurrentRevision(file: VirtualFile): VcsRevisionNumber? {
         repoFor(file) ?: return null
-        return JjRevisionNumber.WORKING_COPY_PARENT
+        return parentRevision
     }
 
     override fun getLastRevision(virtualFile: VirtualFile): ItemLatestState? {
         repoFor(virtualFile) ?: return null
-        return ItemLatestState(JjRevisionNumber.WORKING_COPY_PARENT, true, true)
+        return ItemLatestState(parentRevision, true, true)
     }
 
     override fun getLastRevision(filePath: FilePath): ItemLatestState? {
@@ -52,14 +54,14 @@ class JjDiffProvider(private val project: Project) : DiffProvider {
     }
 
     override fun getLatestCommittedRevision(vcsRoot: VirtualFile): VcsRevisionNumber {
-        return JjRevisionNumber.WORKING_COPY_PARENT
+        return parentRevision
     }
 
     private fun fallbackLastRevision(filePath: FilePath): ItemLatestState? {
         val manager = JjRepositoryManager.getInstance(project)
         for (repo in manager.getAll()) {
             if (repo.containsPath(filePath.path)) {
-                return ItemLatestState(JjRevisionNumber.WORKING_COPY_PARENT, true, true)
+                return ItemLatestState(parentRevision, true, true)
             }
         }
         return null

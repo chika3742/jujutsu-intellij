@@ -18,7 +18,7 @@ data class JjCommitRef(
     val commitId: String?,
 ) {
     val isLocal: Boolean get() = remote == null
-    val isConflicted: Boolean get() = commitId == null
+    val hasConflict: Boolean get() = commitId == null
 
     companion object {
         val TEMPLATE: String by lazy {

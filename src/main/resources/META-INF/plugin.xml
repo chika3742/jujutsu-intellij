@@ -38,7 +38,12 @@
         <vcs.commitMessageProvider implementation="net.chikach.jujutsuintellij.vcs.JjCommitMessageProvider"/>
 
         <logProvider implementation="net.chikach.jujutsuintellij.ui.log.JjLogProvider"/>
-        <logHighlighterFactory implementation="net.chikach.jujutsuintellij.ui.log.JjPlaceholderMessageHighlighter$Factory"/>
+        <!-- order=first so our conflict foreground wins over the platform's MergeCommitsHighlighter,
+             which grays out every merge commit and would otherwise mask the conflict color. -->
+        <logHighlighterFactory order="first"
+                               implementation="net.chikach.jujutsuintellij.ui.log.JjLogStyleHighlighter$Factory"/>
+
+        <projectService serviceImplementation="net.chikach.jujutsuintellij.vcs.JjMergeProvider"/>
 
         <statusBarWidgetFactory id="jj.working.copy"
                                 implementation="net.chikach.jujutsuintellij.ui.statusbar.JjStatusBarWidgetFactory"/>
@@ -59,6 +64,8 @@
                 class="net.chikach.jujutsuintellij.actions.JjBookmarkCreateAction"/>
         <action id="Jujutsu.BookmarkDelete"
                 class="net.chikach.jujutsuintellij.actions.JjBookmarkDeleteAction"/>
+        <action id="Jujutsu.ResolveConflicts"
+                class="net.chikach.jujutsuintellij.actions.JjResolveConflictsAction"/>
 
         <action id="Jujutsu.RevisionWidget"
                 class="net.chikach.jujutsuintellij.ui.JjRevisionWidget">
@@ -72,6 +79,7 @@
             <reference ref="Jujutsu.NewChange"/>
             <reference ref="Jujutsu.Describe"/>
             <reference ref="Jujutsu.Abandon"/>
+            <reference ref="Jujutsu.ResolveConflicts"/>
             <separator/>
             <reference ref="Jujutsu.Fetch"/>
             <reference ref="Jujutsu.Push"/>
@@ -94,6 +102,7 @@
             <reference ref="Jujutsu.NewChange"/>
             <reference ref="Jujutsu.Describe"/>
             <reference ref="Jujutsu.Abandon"/>
+            <reference ref="Jujutsu.ResolveConflicts"/>
             <separator/>
             <reference ref="Jujutsu.Fetch"/>
             <reference ref="Jujutsu.Push"/>
@@ -104,6 +113,11 @@
             <reference ref="ChangesView.Revert"/>
             <reference ref="ChangesView.RevertFiles"/>
             <add-to-group group-id="VcsGroup" anchor="last"/>
+        </group>
+
+        <group id="Jujutsu.LogContextMenu">
+            <reference ref="Jujutsu.ResolveConflicts"/>
+            <add-to-group group-id="Vcs.Log.ContextMenu" anchor="last"/>
         </group>
     </actions>
 </idea-plugin>

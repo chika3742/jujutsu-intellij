@@ -16,7 +16,10 @@ data class JjCommit(
     val description: String,
     val bookmarks: List<String>,
     val isRoot: Boolean = false,
+    val conflictedFiles: List<String> = emptyList(),
 ) {
+    val isConflicted: Boolean get() = conflictedFiles.isNotEmpty()
+
     companion object {
         val TEMPLATE: String by lazy {
             JjTemplates.commitJsonLine {
@@ -30,6 +33,7 @@ data class JjCommit(
                     "description" to string(description())
                     "bookmarks" to serialized(bookmarks())
                     "isRoot" to bool(root())
+                    "conflictedFiles" to serialized(conflictedFilePaths())
                 }
             }
         }

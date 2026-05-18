@@ -16,7 +16,7 @@ import net.chikach.jujutsuintellij.repo.model.JjFileChange
 import java.io.File
 
 /**
- * Populates IntelliJ's Local Changes view from `jj diff --summary --from @- --to @`. Each
+ * Populates IntelliJ's Local Changes view from `jj diff --summary --from first_parent(@) --to @`. Each
  * reported file becomes a [Change] whose `afterRevision` reflects the on-disk (working-copy)
  * state and whose `beforeRevision` lazily reads the parent commit via `jj file show`.
  *
@@ -63,9 +63,16 @@ class JjChangeProvider(private val project: Project) : ChangeProvider {
             return
         }
 
+        val conflicted = try {
+            repo.workingCopyConflictedFiles().mapTo(HashSet()) { repo.normalizeRelativePath(it) }
+        } catch (e: Exception) {
+            LOG.warn("jj conflict listing failed in ${repo.rootPath}", e)
+            emptySet()
+        }
+
         for (change in changes) {
             progress.checkCanceled()
-            reportChange(change, repo, builder, processedPaths)
+            reportChange(change, repo, builder, processedPaths, conflicted)
         }
 
         reportIgnoredFiles(repo, builder, progress, processedPaths)
@@ -76,7 +83,12 @@ class JjChangeProvider(private val project: Project) : ChangeProvider {
         repo: JjRepository,
         builder: ChangelistBuilder,
         processedPaths: MutableSet<FilePath>,
+        conflicted: Set<String>,
     ) {
+        if (repo.normalizeRelativePath(change.path) in conflicted) {
+            reportConflicted(repo, change.path, builder, processedPaths)
+            return
+        }
         when (change.status) {
             JjFileChange.Status.ADDED -> reportAdded(repo, change.path, builder, processedPaths)
             JjFileChange.Status.MODIFIED -> reportModified(repo, change.path, builder, processedPaths)
@@ -132,10 +144,27 @@ class JjChangeProvider(private val project: Project) : ChangeProvider {
         builder: ChangelistBuilder,
         processedPaths: MutableSet<FilePath>,
     ) {
-        val before = JjContentRevision(repo, relative, PARENT_REF)
+        val before = JjContentRevision(repo, relative, JjRepository.FIRST_PARENT_REF)
         val (filePath, after) = currentContent(repo, relative)
         processedPaths += filePath
         builder.processChange(Change(before, after, FileStatus.MODIFIED), JujutsuVcs.KEY)
+    }
+
+    /**
+     * A file in a conflicted state at `@`. Reported as [FileStatus.MERGED_WITH_CONFLICTS] so the
+     * IDE shows the "Resolve Conflicts" affordance and routes the double-click to the 3-way merge
+     * tool ([JjMergeProvider]) instead of a plain diff of the materialized conflict markers.
+     */
+    private fun reportConflicted(
+        repo: JjRepository,
+        relative: String,
+        builder: ChangelistBuilder,
+        processedPaths: MutableSet<FilePath>,
+    ) {
+        val before = JjContentRevision(repo, relative, JjRepository.FIRST_PARENT_REF)
+        val (filePath, after) = currentContent(repo, relative)
+        processedPaths += filePath
+        builder.processChange(Change(before, after, FileStatus.MERGED_WITH_CONFLICTS), JujutsuVcs.KEY)
     }
 
     private fun reportDeleted(
@@ -144,7 +173,7 @@ class JjChangeProvider(private val project: Project) : ChangeProvider {
         builder: ChangelistBuilder,
         processedPaths: MutableSet<FilePath>,
     ) {
-        val before = JjContentRevision(repo, relative, PARENT_REF)
+        val before = JjContentRevision(repo, relative, JjRepository.FIRST_PARENT_REF)
         processedPaths += before.file
         builder.processChange(Change(before, null, FileStatus.DELETED), JujutsuVcs.KEY)
     }
@@ -157,7 +186,7 @@ class JjChangeProvider(private val project: Project) : ChangeProvider {
         processedPaths: MutableSet<FilePath>,
         isCopy: Boolean,
     ) {
-        val before = JjContentRevision(repo, oldRelative, PARENT_REF)
+        val before = JjContentRevision(repo, oldRelative, JjRepository.FIRST_PARENT_REF)
         val (newFilePath, after) = currentContent(repo, newRelative)
         processedPaths += before.file
         processedPaths += newFilePath
@@ -201,7 +230,7 @@ class JjChangeProvider(private val project: Project) : ChangeProvider {
             val repo = manager.getRepositoryForFile(file) ?: continue
             val relative = repo.relativize(file.path) ?: continue
 
-            val before = JjContentRevision(repo, relative, PARENT_REF)
+            val before = JjContentRevision(repo, relative, JjRepository.FIRST_PARENT_REF)
             val after = CurrentContentRevision(filePath)
             builder.processChange(Change(before, after, FileStatus.MODIFIED), JujutsuVcs.KEY)
         }
@@ -211,6 +240,5 @@ class JjChangeProvider(private val project: Project) : ChangeProvider {
 
     companion object {
         private val LOG = logger<JjChangeProvider>()
-        private const val PARENT_REF = "@-"
     }
 }

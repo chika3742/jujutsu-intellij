@@ -8,9 +8,12 @@ import com.intellij.openapi.vcs.changes.Change
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.Consumer
 import com.intellij.vcs.log.*
+import net.chikach.jujutsuintellij.JujutsuBundle
 import net.chikach.jujutsuintellij.caches.JjCommitCache
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
+import net.chikach.jujutsuintellij.repo.JjWorkingCopyCache
 import net.chikach.jujutsuintellij.repo.model.JjCommit
+import net.chikach.jujutsuintellij.vcs.JjConflictTracker
 import net.chikach.jujutsuintellij.vcs.JujutsuVcs
 
 class JjLogProvider(private val project: Project) : VcsLogProvider {
@@ -22,6 +25,7 @@ class JjLogProvider(private val project: Project) : VcsLogProvider {
         val factory = project.service<VcsLogObjectsFactory>()
 
         val entries = repo.recentLog(requirements.commitCount)
+        JjConflictTracker.getInstance(project).record(entries)
         val refs = loadBookmarkRefs(root, factory)
         JjCommitCache.getInstance(project).record(entries)
         val commitsList = entries.map { entry -> entry.toCommitMetadata(root, factory) }
@@ -37,7 +41,9 @@ class JjLogProvider(private val project: Project) : VcsLogProvider {
         val factory = project.service<VcsLogObjectsFactory>()
 
         val users = mutableSetOf<VcsUser>()
-        repo.allTimedCommits().forEach { entry ->
+        val entries = repo.allTimedCommits()
+        JjConflictTracker.getInstance(project).record(entries)
+        entries.forEach { entry ->
             commitConsumer.consume(
                 factory.createTimedCommit(
                     factory.createHash(entry.commitId),
@@ -59,7 +65,9 @@ class JjLogProvider(private val project: Project) : VcsLogProvider {
         val repo = JjRepositoryManager.getInstance(project).getRepositoryForRoot(root)
         val factory = project.service<VcsLogObjectsFactory>()
 
-        repo.logByIds(hashes).forEach { entry ->
+        val entries = repo.logByIds(hashes)
+        JjConflictTracker.getInstance(project).record(entries)
+        entries.forEach { entry ->
             consumer.consume(entry.toCommitMetadata(root, factory))
             JjCommitCache.getInstance(project).record(entry)
         }
@@ -70,7 +78,9 @@ class JjLogProvider(private val project: Project) : VcsLogProvider {
         val repo = JjRepositoryManager.getInstance(project).getRepositoryForRoot(root)
         val factory = project.service<VcsLogObjectsFactory>()
 
-        repo.logByIds(hashes).forEach { entry ->
+        val entries = repo.logByIds(hashes)
+        JjConflictTracker.getInstance(project).record(entries)
+        entries.forEach { entry ->
             val metadata = entry.toCommitMetadata(root, factory)
             commitConsumer.consume(object : VcsFullCommitDetails, VcsCommitMetadata by metadata {
                 override fun getChanges(): Collection<Change> = emptyList()
@@ -103,19 +113,25 @@ class JjLogProvider(private val project: Project) : VcsLogProvider {
     override fun <T> getPropertyValue(property: VcsLogProperties.VcsLogProperty<T>): T? = null
 
     override fun getCurrentBranch(root: VirtualFile): String? {
-        val repo = JjRepositoryManager.getInstance(project).getRepositoryForRoot(root)
-        return repo.listBookmarks(revset = "@ & bookmarks()").firstOrNull()?.name
+        // Invoked on the EDT by the platform's CurrentBranchHighlighter, so it must not run jj
+        // synchronously. Return the cached value and schedule a debounced background refresh.
+        val cache = JjWorkingCopyCache.getInstance(project)
+        cache.refresh()
+        return cache.currentBranch
     }
 
     private fun JjCommit.toCommitMetadata(root: VirtualFile, factory: VcsLogObjectsFactory): VcsCommitMetadata {
         val hash = factory.createHash(commitId)
         val parents = parentIds.map { factory.createHash(it) }
         val placeholder = when {
-            isRoot -> ROOT_PLACEHOLDER
-            description.isBlank() -> NO_DESCRIPTION_PLACEHOLDER
+            isRoot -> JujutsuBundle.message("changeDesc.root")
+            description.isBlank() -> JujutsuBundle.message("changeDesc.noDescriptionSet")
             else -> null
         }
-        val subject = placeholder ?: (description.lines().firstOrNull()?.trim() ?: "")
+        var subject = placeholder ?: (description.lines().firstOrNull()?.trim() ?: "")
+        if (isConflicted) {
+            subject += " ${JujutsuBundle.message("changeDesc.conflicted")}"
+        }
         val message = placeholder ?: description.trimEnd('\n')
         return factory.createCommitMetadata(
             hash, parents, authorTime.time, root,
@@ -132,10 +148,5 @@ class JjLogProvider(private val project: Project) : VcsLogProvider {
                 val commitId = ref.commitId ?: return@mapNotNull null
                 factory.createRef(factory.createHash(commitId), ref.name, JjBookmarkRefType, root)
             }
-    }
-
-    companion object {
-        const val NO_DESCRIPTION_PLACEHOLDER = "<no description set>"
-        const val ROOT_PLACEHOLDER = "<root>"
     }
 }

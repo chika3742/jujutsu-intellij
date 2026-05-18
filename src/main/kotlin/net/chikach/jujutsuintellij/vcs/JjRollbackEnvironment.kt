@@ -15,11 +15,12 @@ import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
 
 /**
- * Implements "Revert" in the Local Changes view via `jj restore --from @- <paths>`.
+ * Implements "Revert" in the Local Changes view via `jj restore <paths>`.
  *
- * Each reverted file is restored to its state in the parent commit `@-`. After all
- * restore calls complete, the affected files are refreshed in the VFS so the editor
- * reflects the on-disk content immediately.
+ * Each reverted file is restored to its state in `@`'s parent(s); jj auto-merges multiple
+ * parents, so this is correct for merge working copies too. After all restore calls complete,
+ * the affected files are refreshed in the VFS so the editor reflects the on-disk content
+ * immediately.
  */
 @Service(Service.Level.PROJECT)
 class JjRollbackEnvironment(private val project: Project) : RollbackEnvironment {
@@ -51,7 +52,7 @@ class JjRollbackEnvironment(private val project: Project) : RollbackEnvironment 
         val errors = vcsExceptions as MutableList<VcsException>
         for ((repo, paths) in changesByRepo) {
             try {
-                repo.restore("@-", paths)
+                repo.restore(paths)
             } catch (e: JjOperationException) {
                 errors += VcsException("jj restore failed: ${e.message}", e)
             }

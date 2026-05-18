@@ -24,9 +24,4 @@ class JjRevisionNumber(private val revision: String) : VcsRevisionNumber {
     }
 
     override fun hashCode(): Int = revision.hashCode()
-
-    companion object {
-        val WORKING_COPY: JjRevisionNumber = JjRevisionNumber("@")
-        val WORKING_COPY_PARENT: JjRevisionNumber = JjRevisionNumber("@-")
-    }
 }

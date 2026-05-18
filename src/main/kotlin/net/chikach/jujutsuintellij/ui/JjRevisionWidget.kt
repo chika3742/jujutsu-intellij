@@ -3,7 +3,8 @@ package net.chikach.jujutsuintellij.ui
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.actionSystem.ex.ComboBoxAction
-import net.chikach.jujutsuintellij.repo.JjWorkingCopyDescription
+import net.chikach.jujutsuintellij.JujutsuBundle
+import net.chikach.jujutsuintellij.repo.JjWorkingCopyCache
 import net.chikach.jujutsuintellij.vcs.JujutsuVcs.Companion.isActiveIn
 import javax.swing.JComponent
 
@@ -22,15 +23,15 @@ class JjRevisionWidget : ComboBoxAction() {
             e.presentation.isEnabledAndVisible = false
             return
         }
-        val descService = JjWorkingCopyDescription.getInstance(project)
+        val descService = JjWorkingCopyCache.getInstance(project)
         descService.refresh()
-        val desc = descService.description
-        val display = desc.ifEmpty { NO_DESC }.let { raw ->
+        val desc = descService.description.ifEmpty { JujutsuBundle.message("changeDesc.noDescriptionSet") }
+        val display = desc.let { raw ->
             if (raw.length > MAX_LEN) raw.take(MAX_LEN) + "…" else raw
         }
         e.presentation.setText(display, false)
         e.presentation.icon = AllIcons.Vcs.Branch
-        e.presentation.description = "Jujutsu working copy: ${desc.ifEmpty { NO_DESC }}"
+        e.presentation.description = "Jujutsu working copy: $desc"
         e.presentation.isEnabledAndVisible = true
     }
 
@@ -43,7 +44,6 @@ class JjRevisionWidget : ComboBoxAction() {
     }
 
     companion object {
-        private const val NO_DESC = "(no description)"
         private const val MAX_LEN = 40
     }
 }

@@ -68,16 +68,25 @@ class JjCommands {
     fun describe(repo: JjRepository, message: String): JjCommandResult =
         execute(request(repo.rootPathNio, listOf("describe", "-m", message)))
 
-    fun newChange(repo: JjRepository): JjCommandResult =
-        execute(request(repo.rootPathNio, listOf("new")))
+    fun new(repo: JjRepository, revision: String? = null): JjCommandResult {
+        val args = buildList {
+            add("new")
+            if (revision != null) add(revision)
+        }
+        return execute(request(repo.rootPathNio, args))
+    }
 
     fun commit(repo: JjRepository, message: String): JjCommandResult =
         execute(request(repo.rootPathNio, listOf("commit", "-m", message)))
 
-    fun restore(repo: JjRepository, fromRevision: String, relativePaths: List<String>): JjCommandResult {
+    /**
+     * `jj restore <paths>` with no `--from`: restores the paths into `@` from its parent(s).
+     * jj auto-merges multiple parents, so this is correct for merge commits too — unlike an
+     * explicit `--from @-`, which errors with "resolved to more than one revision" on a merge.
+     */
+    fun restore(repo: JjRepository, relativePaths: List<String>): JjCommandResult {
         val args = buildList {
             add("restore")
-            add("--from"); add(fromRevision)
             addAll(relativePaths)
         }
         return execute(request(repo.rootPathNio, args))

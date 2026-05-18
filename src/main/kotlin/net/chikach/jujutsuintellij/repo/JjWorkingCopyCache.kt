@@ -13,18 +13,26 @@ import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 
 /**
- * Project-scoped cache for the working-copy commit's description (`jj log -r @ -T description`).
+ * Project-scoped cache for working-copy (`@`) state: its commit description and the nearest
+ * ancestor bookmark ("current branch").
  *
  * [refresh] debounces requests by 200 ms and executes on the application's shared pooled executor.
  * The background task:
  *   1. Acquires a read action to resolve the repository (required by WorkspaceFileIndex).
  *   2. Releases the read action and then runs the jj CLI (not allowed inside a read action).
- *   3. Updates [description] and notifies listeners on the EDT when the value changes.
+ *   3. Updates [description] / [currentBranch] and notifies listeners on the EDT when a value
+ *      changes.
+ *
+ * [currentBranch] in particular is read from the EDT by the VCS log's `CurrentBranchHighlighter`;
+ * caching it here keeps that call non-blocking instead of running `jj` synchronously on the EDT.
  */
 @Service(Service.Level.PROJECT)
-class JjWorkingCopyDescription(private val project: Project) : Disposable {
+class JjWorkingCopyCache(private val project: Project) : Disposable {
 
     @Volatile var description: String = ""
+        private set
+
+    @Volatile var currentBranch: String? = null
         private set
 
     private val changeListeners = CopyOnWriteArrayList<Runnable>()
@@ -55,9 +63,22 @@ class JjWorkingCopyDescription(private val project: Project) : Disposable {
         } ?: return
 
         // Step 2: run jj CLI outside the read action (process execution not allowed inside one).
-        val newDesc = runCatching { repo.workingCopyDescription() }.getOrNull() ?: return
-        if (newDesc != description) {
+        var changed = false
+
+        val newDesc = runCatching { repo.workingCopyDescription() }.getOrNull()
+        if (newDesc != null && newDesc != description) {
             description = newDesc
+            changed = true
+        }
+
+        runCatching { repo.currentBranch() }.onSuccess { newBranch ->
+            if (newBranch != currentBranch) {
+                currentBranch = newBranch
+                changed = true
+            }
+        }
+
+        if (changed) {
             ActivityTracker.getInstance().inc()
             ApplicationManager.getApplication().invokeLater {
                 changeListeners.forEach { it.run() }
@@ -72,6 +93,6 @@ class JjWorkingCopyDescription(private val project: Project) : Disposable {
     }
 
     companion object {
-        fun getInstance(project: Project): JjWorkingCopyDescription = project.service()
+        fun getInstance(project: Project): JjWorkingCopyCache = project.service()
     }
 }

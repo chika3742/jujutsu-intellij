@@ -22,6 +22,8 @@ sealed interface CommitExpr : SerializableExpr
 
 sealed interface CommitRefExpr : SerializableExpr
 
+sealed interface TreeEntryExpr : SerializableExpr
+
 sealed interface SignatureExpr : SerializableExpr
 
 sealed interface AnnotationLineExpr : JjTemplateExpr
@@ -97,6 +99,7 @@ private class RenderedBooleanExpr(source: String) : RenderedExpr(source), Boolea
 private class RenderedTimestampExpr(source: String) : RenderedExpr(source), TimestampExpr
 private class RenderedCommitExpr(source: String) : RenderedExpr(source), CommitExpr
 private class RenderedCommitRefExpr(source: String) : RenderedExpr(source), CommitRefExpr
+private class RenderedTreeEntryExpr(source: String) : RenderedExpr(source), TreeEntryExpr
 private class RenderedSignatureExpr(source: String) : RenderedExpr(source), SignatureExpr
 private class RenderedAnnotationLineExpr(source: String) : RenderedExpr(source), AnnotationLineExpr
 private class RenderedListExpr<T : JjTemplateExpr>(source: String) : RenderedExpr(source), ListExpr<T>
@@ -146,6 +149,8 @@ fun commitExpr(source: String): CommitExpr = RenderedCommitExpr(source)
 
 fun commitRefExpr(source: String): CommitRefExpr = RenderedCommitRefExpr(source)
 
+fun treeEntryExpr(source: String): TreeEntryExpr = RenderedTreeEntryExpr(source)
+
 fun annotationLineExpr(source: String): AnnotationLineExpr = RenderedAnnotationLineExpr(source)
 
 fun <T : JjTemplateExpr> listExpr(source: String): ListExpr<T> = RenderedListExpr(source)
@@ -185,6 +190,18 @@ fun CommitExpr.root(): BooleanExpr = RenderedBooleanExpr(methodCall(this, "root"
 
 fun CommitExpr.bookmarks(): ListExpr<SerializableTemplateExpr> = RenderedListExpr<SerializableTemplateExpr>(methodCall(this, "bookmarks"))
     .map(lambda(::commitRefExpr) { it.name() })
+
+fun TreeEntryExpr.path(): SerializableTemplateExpr =
+    serializableTemplateExpr(methodCall(this, "path"))
+
+/**
+ * `self.conflicted_files().map(|p| stringify(p.path()))` — yields a list of path strings.
+ * `stringify` flattens jj's `RepoPath` to its string form so `serialized(...)` renders it
+ * as a JSON array of plain strings via jj's `json()` function.
+ */
+fun CommitExpr.conflictedFilePaths(): ListExpr<SerializableTemplateExpr> =
+    listExpr<TreeEntryExpr>(methodCall(this, "conflicted_files"))
+        .map(lambda(::treeEntryExpr) { stringify(it.path()) })
 
 /** Maps `parents` to their commit ids. */
 fun ListExpr<CommitExpr>.commitIds(): ListExpr<SerializableTemplateExpr> =

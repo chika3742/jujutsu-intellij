@@ -9,14 +9,15 @@ import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.openapi.wm.StatusBar
 import com.intellij.openapi.wm.StatusBarWidget
 import com.intellij.openapi.wm.StatusBarWidget.MultipleTextValuesPresentation
-import net.chikach.jujutsuintellij.repo.JjWorkingCopyDescription
+import net.chikach.jujutsuintellij.JujutsuBundle
+import net.chikach.jujutsuintellij.repo.JjWorkingCopyCache
 
 /**
  * Status-bar widget that shows the current `@` description and opens a popup with
  * "New Change" and "Describe" actions when clicked.
  *
  * The widget refreshes immediately after any jj describe / new / commit operation via
- * [JjWorkingCopyDescription.addChangeListener].
+ * [JjWorkingCopyCache.addChangeListener].
  */
 class JjStatusBarWidget(private val project: Project) : StatusBarWidget, MultipleTextValuesPresentation {
 
@@ -29,10 +30,10 @@ class JjStatusBarWidget(private val project: Project) : StatusBarWidget, Multipl
 
     override fun install(statusBar: StatusBar) {
         this.statusBar = statusBar
-        removeListener = JjWorkingCopyDescription.getInstance(project).addChangeListener {
+        removeListener = JjWorkingCopyCache.getInstance(project).addChangeListener {
             statusBar.updateWidget(ID())
         }
-        JjWorkingCopyDescription.getInstance(project).refresh()
+        JjWorkingCopyCache.getInstance(project).refresh()
     }
 
     override fun dispose() {
@@ -42,8 +43,10 @@ class JjStatusBarWidget(private val project: Project) : StatusBarWidget, Multipl
     }
 
     override fun getSelectedValue(): String {
-        val desc = JjWorkingCopyDescription.getInstance(project).description
-        return desc.ifEmpty { "(no description)" }.let { raw ->
+        val desc = JjWorkingCopyCache.getInstance(project).description.ifEmpty {
+            JujutsuBundle.message("changeDesc.noDescriptionSet")
+        }
+        return desc.let { raw ->
             if (raw.length > MAX_LEN) raw.take(MAX_LEN) + "…" else raw
         }
     }
@@ -55,6 +58,7 @@ class JjStatusBarWidget(private val project: Project) : StatusBarWidget, Multipl
         val group = DefaultActionGroup().apply {
             add(ActionManager.getInstance().getAction("Jujutsu.NewChange"))
             add(ActionManager.getInstance().getAction("Jujutsu.Describe"))
+            add(ActionManager.getInstance().getAction("Jujutsu.ResolveConflicts"))
         }
         return JBPopupFactory.getInstance().createActionGroupPopup(
             "Jujutsu",

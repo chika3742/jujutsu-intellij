@@ -52,8 +52,8 @@ class JjRepository(
         commands().describe(this, message).orThrow("describe")
     }
 
-    fun newChange() {
-        commands().newChange(this).orThrow("new")
+    fun newChange(revision: String? = null) {
+        commands().new(this, revision).orThrow("new")
     }
 
     /** Sets the description on `@` and creates a new working-copy on top. */
@@ -65,15 +65,16 @@ class JjRepository(
         commands().abandon(this, revset).orThrow("abandon")
     }
 
-    fun restore(fromRevision: String, relativePaths: List<String>) {
+    /** Reverts [relativePaths] in `@` to their parent state (`jj restore <paths>`). */
+    fun restore(relativePaths: List<String>) {
         val normalized = relativePaths.map { normalizeRelativePath(it) }
-        commands().restore(this, fromRevision, normalized).orThrow("restore")
+        commands().restore(this, normalized).orThrow("restore")
     }
 
     // ─── Diff / Local Changes ───────────────────────────────────────────────
 
     /** Changes between `@-` (parent) and `@` (working-copy). */
-    fun workingCopyChanges(): List<JjFileChange> = diffSummary(PARENT_REF, WORKING_COPY_REF)
+    fun workingCopyChanges(): List<JjFileChange> = diffSummary(FIRST_PARENT_REF, WORKING_COPY_REF)
 
     fun diffSummary(fromRef: String, toRef: String): List<JjFileChange> {
         val result = commands().diffSummary(this, fromRef, toRef)
@@ -115,6 +116,14 @@ class JjRepository(
         return commands().log(this, commitIds.joinToString("|"))
     }
 
+    fun logByRevset(revset: String): List<JjCommit> = commands().log(this, revset)
+
+    /** The working-copy commit (`@`), or `null` if it cannot be read. */
+    fun workingCopyCommit(): JjCommit? = logByRevset(WORKING_COPY_REF).firstOrNull()
+
+    /** Repo-relative paths of files that are in a conflicted state at `@`. */
+    fun workingCopyConflictedFiles(): List<String> = workingCopyCommit()?.conflictedFiles.orEmpty()
+
     // ─── Bookmarks ──────────────────────────────────────────────────────────
 
     /**
@@ -125,6 +134,14 @@ class JjRepository(
 
     fun listBookmarksByCommitId(commitId: String): List<JjCommitRef> =
         listBookmarks("descendants(${commitId})")
+
+    /**
+     * Name of the nearest ancestor bookmark of `@` (the bookmark the working copy is built on top
+     * of), or `null` when no ancestor is bookmarked. `heads(::@ & bookmarks())` selects the
+     * bookmarked ancestors closest to `@`.
+     */
+    fun currentBranch(): String? =
+        listBookmarks(revset = "heads(::@ & bookmarks())").firstOrNull()?.name
 
     fun createBookmark(name: String, revision: String = WORKING_COPY_REF) {
         commands().bookmarkCreate(this, name, revision).orThrow("bookmark create")
@@ -170,7 +187,13 @@ class JjRepository(
     }
 
     companion object {
-        private const val PARENT_REF = "@-"
+        /**
+         * Working-copy parent revset.
+         * `first_parent(@)` rather than `@-`: the latter errors with "resolved to more than one
+         * revision" when `@` is a merge commit. first_parent picks the first parent for merges and
+         * behaves like `@-` for single-parent commits.
+         */
+        const val FIRST_PARENT_REF = "first_parent(@)"
         private const val WORKING_COPY_REF = "@"
         private const val ANCESTORS_OF_WORKING_COPY_REF = "::@"
     }
