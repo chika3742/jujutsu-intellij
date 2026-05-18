@@ -8,7 +8,7 @@ import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
-import java.util.Date
+import java.util.*
 
 /**
  * Decodes ISO 8601 / RFC 3339 timestamp strings (jj template `Timestamp.format("%+")` output)

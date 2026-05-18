@@ -4,7 +4,7 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import net.chikach.jujutsuintellij.cli.JjDateSerializer
 import net.chikach.jujutsuintellij.cli.template.*
-import java.util.Date
+import java.util.*
 
 @Serializable
 data class JjHistoryEntry(

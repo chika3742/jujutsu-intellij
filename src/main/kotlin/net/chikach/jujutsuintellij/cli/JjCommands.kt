@@ -113,9 +113,6 @@ class JjCommands {
     fun bookmarkDelete(repo: JjRepository, name: String): JjCommandResult =
         execute(request(repo.rootPathNio, listOf("bookmark", "delete", name)))
 
-    fun bookmarkSet(repo: JjRepository, name: String, revision: String = "@"): JjCommandResult =
-        execute(request(repo.rootPathNio, listOf("bookmark", "set", "--revision", revision, name)))
-
     fun gitFetch(repo: JjRepository, remote: String? = null): JjCommandResult {
         val args = buildList {
             add("git")

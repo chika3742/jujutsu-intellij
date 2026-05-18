@@ -1,10 +1,6 @@
 package net.chikach.jujutsuintellij.ui.log
 
-import com.intellij.vcs.log.VcsCommitStyleFactory
-import com.intellij.vcs.log.VcsLogDataPack
-import com.intellij.vcs.log.VcsLogHighlighter
-import com.intellij.vcs.log.VcsLogUi
-import com.intellij.vcs.log.VcsShortCommitDetails
+import com.intellij.vcs.log.*
 import com.intellij.vcs.log.data.VcsLogData
 import com.intellij.vcs.log.ui.highlighters.VcsLogHighlighterFactory
 

@@ -99,7 +99,10 @@ class JjLogProvider(private val project: Project) : VcsLogProvider {
 
     override fun <T> getPropertyValue(property: VcsLogProperties.VcsLogProperty<T>): T? = null
 
-    override fun getCurrentBranch(root: VirtualFile): String? = null
+    override fun getCurrentBranch(root: VirtualFile): String? {
+        val repo = JjRepositoryManager.getInstance(project).getRepositoryForRoot(root)
+        return repo.listBookmarks(revset = "@ & bookmarks()").firstOrNull()?.name
+    }
 
     private fun JjCommit.toCommitMetadata(root: VirtualFile, factory: VcsLogObjectsFactory): VcsCommitMetadata {
         val hash = factory.createHash(commitId)

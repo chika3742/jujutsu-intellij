@@ -134,10 +134,6 @@ class JjRepository(
         commands().bookmarkDelete(this, name).orThrow("bookmark delete")
     }
 
-    fun setBookmark(name: String, revision: String = WORKING_COPY_REF) {
-        commands().bookmarkSet(this, name, revision).orThrow("bookmark set")
-    }
-
     // ─── Config ─────────────────────────────────────────────────────────────
 
     /** Returns the config value at [key], or `null` if unset / not retrievable. */
@@ -182,9 +178,10 @@ class JjRepository(
 
 // ─── Internal parsers ───────────────────────────────────────────────────────
 
+private const val RENAME_ARROW = " => "
+private val BRACE_RENAME_REGEX = Regex("""^(.*?)\{(.*?) => (.*?)\}$""")
+
 private fun parseDiffSummary(stdout: String): List<JjFileChange> {
-    val arrow = " => "
-    val braceRename = Regex("""^(.*?)\{(.*?) => (.*?)\}$""")
     val out = mutableListOf<JjFileChange>()
     for (rawLine in stdout.lineSequence()) {
         val line = rawLine.removeSuffix("\r")
@@ -196,7 +193,7 @@ private fun parseDiffSummary(stdout: String): List<JjFileChange> {
             'M' -> out += JjFileChange(JjFileChange.Status.MODIFIED, body)
             'D' -> out += JjFileChange(JjFileChange.Status.DELETED, body)
             'R', 'C' -> {
-                val (old, new) = parseRenameBody(body, braceRename, arrow) ?: continue
+                val (old, new) = parseRenameBody(body) ?: continue
                 val status = if (statusChar == 'R') JjFileChange.Status.RENAMED else JjFileChange.Status.COPIED
                 out += JjFileChange(status, new, sourcePath = old)
             }
@@ -209,15 +206,15 @@ private fun parseDiffSummary(stdout: String): List<JjFileChange> {
  * jj renders renames/copies as one of:
  *   `prefix/{old => new}`, `{old => new}`, or `old => new`.
  */
-private fun parseRenameBody(body: String, brace: Regex, arrow: String): Pair<String, String>? {
-    brace.matchEntire(body)?.let { match ->
+private fun parseRenameBody(body: String): Pair<String, String>? {
+    BRACE_RENAME_REGEX.matchEntire(body)?.let { match ->
         val prefix = match.groupValues[1]
         val oldLeaf = match.groupValues[2]
         val newLeaf = match.groupValues[3]
         return (prefix + oldLeaf) to (prefix + newLeaf)
     }
-    val idx = body.indexOf(arrow)
-    if (idx > 0) return body.substring(0, idx) to body.substring(idx + arrow.length)
+    val idx = body.indexOf(RENAME_ARROW)
+    if (idx > 0) return body.substring(0, idx) to body.substring(idx + RENAME_ARROW.length)
     return null
 }
 
