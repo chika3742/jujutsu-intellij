@@ -8,6 +8,7 @@ import com.intellij.openapi.vcs.changes.Change
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.util.Consumer
 import com.intellij.vcs.log.*
+import net.chikach.jujutsuintellij.caches.JjCommitCache
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
 import net.chikach.jujutsuintellij.repo.model.JjCommit
 import net.chikach.jujutsuintellij.vcs.JujutsuVcs
@@ -22,6 +23,7 @@ class JjLogProvider(private val project: Project) : VcsLogProvider {
 
         val entries = repo.recentLog(requirements.commitCount)
         val refs = loadBookmarkRefs(root, factory)
+        JjCommitCache.getInstance(project).record(entries)
         val commitsList = entries.map { entry -> entry.toCommitMetadata(root, factory) }
 
         return object : VcsLogProvider.DetailedLogData {
@@ -59,6 +61,7 @@ class JjLogProvider(private val project: Project) : VcsLogProvider {
 
         repo.logByIds(hashes).forEach { entry ->
             consumer.consume(entry.toCommitMetadata(root, factory))
+            JjCommitCache.getInstance(project).record(entry)
         }
     }
 
