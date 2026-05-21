@@ -8,11 +8,6 @@
 
     <resource-bundle>messages.JujutsuBundle</resource-bundle>
 
-    <projectListeners>
-        <listener class="net.chikach.jujutsuintellij.ui.statusbar.JjStatusBarMappingListener"
-                  topic="com.intellij.openapi.vcs.VcsMappingListener"/>
-    </projectListeners>
-
     <extensions defaultExtensionNs="com.intellij">
         <applicationConfigurable
                 parentId="tools"
@@ -44,9 +39,6 @@
                                implementation="net.chikach.jujutsuintellij.ui.log.JjLogStyleHighlighter$Factory"/>
 
         <projectService serviceImplementation="net.chikach.jujutsuintellij.vcs.JjMergeProvider"/>
-
-        <statusBarWidgetFactory id="jj.working.copy"
-                                implementation="net.chikach.jujutsuintellij.ui.statusbar.JjStatusBarWidgetFactory"/>
     </extensions>
 
     <actions resource-bundle="messages.JujutsuBundle">
