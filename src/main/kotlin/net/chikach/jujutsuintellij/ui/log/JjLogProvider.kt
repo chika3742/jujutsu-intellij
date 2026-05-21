@@ -3,6 +3,7 @@ package net.chikach.jujutsuintellij.ui.log
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.vcs.FileStatus
 import com.intellij.openapi.vcs.VcsKey
 import com.intellij.openapi.vcs.changes.Change
 import com.intellij.openapi.vfs.VirtualFile
@@ -10,10 +11,13 @@ import com.intellij.util.Consumer
 import com.intellij.vcs.log.*
 import net.chikach.jujutsuintellij.JujutsuBundle
 import net.chikach.jujutsuintellij.caches.JjCommitCache
+import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
 import net.chikach.jujutsuintellij.repo.JjWorkingCopyCache
 import net.chikach.jujutsuintellij.repo.model.JjCommit
+import net.chikach.jujutsuintellij.repo.model.JjFileChange
 import net.chikach.jujutsuintellij.vcs.JjConflictTracker
+import net.chikach.jujutsuintellij.vcs.JjContentRevision
 import net.chikach.jujutsuintellij.vcs.JujutsuVcs
 
 class JjLogProvider(private val project: Project) : VcsLogProvider {
@@ -82,12 +86,29 @@ class JjLogProvider(private val project: Project) : VcsLogProvider {
         JjConflictTracker.getInstance(project).record(entries)
         entries.forEach { entry ->
             val metadata = entry.toCommitMetadata(root, factory)
+            // Compute diffs here (readFullDetails runs off-EDT); getChanges() is later queried on
+            // the EDT by the log's diff preview and must not shell out to jj itself.
+            val changesByParent = entry.parentIds.map { changesBetween(repo, it, entry.commitId) }
             commitConsumer.consume(object : VcsFullCommitDetails, VcsCommitMetadata by metadata {
-                override fun getChanges(): Collection<Change> = emptyList()
-                override fun getChanges(parent: Int): Collection<Change> = emptyList()
+                override fun getChanges(): Collection<Change> = changesByParent.firstOrNull().orEmpty()
+                override fun getChanges(parent: Int): Collection<Change> = changesByParent.getOrNull(parent).orEmpty()
             })
         }
     }
+
+    /** Builds [Change]s for the diff of [toRev] against [fromRev] (commit-vs-parent in the log). */
+    private fun changesBetween(repo: JjRepository, fromRev: String, toRev: String): List<Change> =
+        repo.diffSummary(fromRev, toRev).map { fc ->
+            fun before(path: String) = JjContentRevision(repo, path, fromRev)
+            fun after(path: String) = JjContentRevision(repo, path, toRev)
+            when (fc.status) {
+                JjFileChange.Status.ADDED -> Change(null, after(fc.path), FileStatus.ADDED)
+                JjFileChange.Status.DELETED -> Change(before(fc.path), null, FileStatus.DELETED)
+                JjFileChange.Status.MODIFIED -> Change(before(fc.path), after(fc.path), FileStatus.MODIFIED)
+                JjFileChange.Status.RENAMED -> Change(before(fc.sourcePath!!), after(fc.path), FileStatus.MODIFIED)
+                JjFileChange.Status.COPIED -> Change(before(fc.sourcePath!!), after(fc.path), FileStatus.ADDED)
+            }
+        }
 
     override fun getSupportedVcs(): VcsKey = JujutsuVcs.KEY
 
