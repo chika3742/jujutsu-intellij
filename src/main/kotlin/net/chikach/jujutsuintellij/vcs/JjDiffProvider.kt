@@ -24,7 +24,7 @@ import net.chikach.jujutsuintellij.repo.JjRepositoryManager
 @Service(Service.Level.PROJECT)
 class JjDiffProvider(private val project: Project) : DiffProvider {
 
-    private val parentRevision = JjRevisionNumber(JjRepository.FIRST_PARENT_REF)
+    private val parentRevision = JjRevisionNumber(JjRepository.WORKING_COPY_FIRST_PARENT_REVSET)
 
     override fun getCurrentRevision(file: VirtualFile): VcsRevisionNumber? {
         repoFor(file) ?: return null

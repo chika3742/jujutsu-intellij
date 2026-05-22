@@ -144,7 +144,7 @@ class JjChangeProvider(private val project: Project) : ChangeProvider {
         builder: ChangelistBuilder,
         processedPaths: MutableSet<FilePath>,
     ) {
-        val before = JjContentRevision(repo, relative, JjRepository.FIRST_PARENT_REF)
+        val before = JjContentRevision(repo, relative, JjRepository.WORKING_COPY_FIRST_PARENT_REVSET)
         val (filePath, after) = currentContent(repo, relative)
         processedPaths += filePath
         builder.processChange(Change(before, after, FileStatus.MODIFIED), JujutsuVcs.KEY)
@@ -161,7 +161,7 @@ class JjChangeProvider(private val project: Project) : ChangeProvider {
         builder: ChangelistBuilder,
         processedPaths: MutableSet<FilePath>,
     ) {
-        val before = JjContentRevision(repo, relative, JjRepository.FIRST_PARENT_REF)
+        val before = JjContentRevision(repo, relative, JjRepository.WORKING_COPY_FIRST_PARENT_REVSET)
         val (filePath, after) = currentContent(repo, relative)
         processedPaths += filePath
         builder.processChange(Change(before, after, FileStatus.MERGED_WITH_CONFLICTS), JujutsuVcs.KEY)
@@ -173,7 +173,7 @@ class JjChangeProvider(private val project: Project) : ChangeProvider {
         builder: ChangelistBuilder,
         processedPaths: MutableSet<FilePath>,
     ) {
-        val before = JjContentRevision(repo, relative, JjRepository.FIRST_PARENT_REF)
+        val before = JjContentRevision(repo, relative, JjRepository.WORKING_COPY_FIRST_PARENT_REVSET)
         processedPaths += before.file
         builder.processChange(Change(before, null, FileStatus.DELETED), JujutsuVcs.KEY)
     }
@@ -186,7 +186,7 @@ class JjChangeProvider(private val project: Project) : ChangeProvider {
         processedPaths: MutableSet<FilePath>,
         isCopy: Boolean,
     ) {
-        val before = JjContentRevision(repo, oldRelative, JjRepository.FIRST_PARENT_REF)
+        val before = JjContentRevision(repo, oldRelative, JjRepository.WORKING_COPY_FIRST_PARENT_REVSET)
         val (newFilePath, after) = currentContent(repo, newRelative)
         processedPaths += before.file
         processedPaths += newFilePath
@@ -230,7 +230,7 @@ class JjChangeProvider(private val project: Project) : ChangeProvider {
             val repo = manager.getRepositoryForFile(file) ?: continue
             val relative = repo.relativize(file.path) ?: continue
 
-            val before = JjContentRevision(repo, relative, JjRepository.FIRST_PARENT_REF)
+            val before = JjContentRevision(repo, relative, JjRepository.WORKING_COPY_FIRST_PARENT_REVSET)
             val after = CurrentContentRevision(filePath)
             builder.processChange(Change(before, after, FileStatus.MODIFIED), JujutsuVcs.KEY)
         }

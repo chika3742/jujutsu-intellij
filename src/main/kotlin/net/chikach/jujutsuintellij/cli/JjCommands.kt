@@ -65,8 +65,21 @@ class JjCommands {
         return execute(request(repo.rootPathNio, listOf("file", "show", "-r", revision, rel)))
     }
 
-    fun describe(repo: JjRepository, message: String): JjCommandResult =
-        execute(request(repo.rootPathNio, listOf("describe", "-m", message)))
+    fun describe(repo: JjRepository, message: String, revision: String? = null): JjCommandResult {
+        val args = buildList {
+            add("describe")
+            if (revision != null) add(revision)
+            add("-m"); add(message)
+        }
+        return execute(request(repo.rootPathNio, args))
+    }
+
+    fun squash(repo: JjRepository, from: String, into: String): JjCommandResult =
+        execute(request(repo.rootPathNio, listOf("squash", "--from", from, "--into", into)))
+
+    /** [modeFlag] is `-r` (the revisions only) or `-s` (the revisions and their descendants). */
+    fun rebase(repo: JjRepository, modeFlag: String, revisions: String, onto: String): JjCommandResult =
+        execute(request(repo.rootPathNio, listOf("rebase", modeFlag, revisions, "-o", onto)))
 
     fun new(repo: JjRepository, revision: String? = null): JjCommandResult {
         val args = buildList {

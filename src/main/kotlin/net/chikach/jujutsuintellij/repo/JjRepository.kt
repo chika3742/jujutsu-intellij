@@ -48,8 +48,19 @@ class JjRepository(
         return if (result.isSuccess) result.stdout.trimEnd() else ""
     }
 
-    fun describe(message: String) {
-        commands().describe(this, message).orThrow("describe")
+    /** Updates the description of [revision] (default `@`). */
+    fun describe(message: String, revision: String? = null) {
+        commands().describe(this, message, revision).orThrow("describe")
+    }
+
+    /** Moves the changes of [from] into [into] (`jj squash --from … --into …`). */
+    fun squash(from: String, into: String) {
+        commands().squash(this, from, into).orThrow("squash")
+    }
+
+    /** Rebases [revisions] onto [destination]. [mode] selects whether descendants move too. */
+    fun rebase(revisions: String, destination: String, mode: RebaseMode) {
+        commands().rebase(this, mode.flag, revisions, destination).orThrow("rebase")
     }
 
     fun newChange(revision: String? = null) {
@@ -74,7 +85,7 @@ class JjRepository(
     // ─── Diff / Local Changes ───────────────────────────────────────────────
 
     /** Changes between `@-` (parent) and `@` (working-copy). */
-    fun workingCopyChanges(): List<JjFileChange> = diffSummary(FIRST_PARENT_REF, WORKING_COPY_REF)
+    fun workingCopyChanges(): List<JjFileChange> = diffSummary(WORKING_COPY_FIRST_PARENT_REVSET, WORKING_COPY_REF)
 
     fun diffSummary(fromRef: String, toRef: String): List<JjFileChange> {
         val result = commands().diffSummary(this, fromRef, toRef)
@@ -176,6 +187,9 @@ class JjRepository(
         commands().gitPush(this, bookmark, remote).orThrow("git push")
     }
 
+    /** `jj rebase` revision-selection mode: `-r` moves only the revisions, `-s` adds descendants. */
+    enum class RebaseMode(val flag: String) { REVISION("-r"), DESCENDANTS("-s") }
+
     override fun toString(): String = "JjRepository(root=$rootPath)"
 
     // ─── Helpers ────────────────────────────────────────────────────────────
@@ -193,7 +207,11 @@ class JjRepository(
          * revision" when `@` is a merge commit. first_parent picks the first parent for merges and
          * behaves like `@-` for single-parent commits.
          */
-        const val FIRST_PARENT_REF = "first_parent(@)"
+        const val WORKING_COPY_FIRST_PARENT_REVSET = "first_parent(@)"
+
+        /** `first_parent(<rev>)`: the parent revset that is unambiguous even for merge commits. */
+        fun firstParentRef(revision: String): String = "first_parent($revision)"
+
         private const val WORKING_COPY_REF = "@"
         private const val ANCESTORS_OF_WORKING_COPY_REF = "::@"
     }

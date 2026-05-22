@@ -58,6 +58,16 @@
                 class="net.chikach.jujutsuintellij.actions.JjBookmarkDeleteAction"/>
         <action id="Jujutsu.ResolveConflicts"
                 class="net.chikach.jujutsuintellij.actions.JjResolveConflictsAction"/>
+        <action id="Jujutsu.Log.Describe"
+                class="net.chikach.jujutsuintellij.actions.JjLogDescribeAction"/>
+        <action id="Jujutsu.Log.Abandon"
+                class="net.chikach.jujutsuintellij.actions.JjLogAbandonAction"/>
+        <action id="Jujutsu.Squash"
+                class="net.chikach.jujutsuintellij.actions.JjSquashAction"/>
+        <action id="Jujutsu.RebaseRevision"
+                class="net.chikach.jujutsuintellij.actions.JjRebaseRevisionAction"/>
+        <action id="Jujutsu.RebaseDescendants"
+                class="net.chikach.jujutsuintellij.actions.JjRebaseDescendantsAction"/>
 
         <action id="Jujutsu.RevisionWidget"
                 class="net.chikach.jujutsuintellij.ui.JjRevisionWidget">
@@ -109,6 +119,13 @@
 
         <group id="Jujutsu.LogContextMenu">
             <reference ref="Jujutsu.ResolveConflicts"/>
+            <separator/>
+            <reference ref="Jujutsu.Log.Describe"/>
+            <reference ref="Jujutsu.Log.Abandon"/>
+            <separator/>
+            <reference ref="Jujutsu.Squash"/>
+            <reference ref="Jujutsu.RebaseRevision"/>
+            <reference ref="Jujutsu.RebaseDescendants"/>
             <add-to-group group-id="Vcs.Log.ContextMenu" anchor="last"/>
         </group>
     </actions>

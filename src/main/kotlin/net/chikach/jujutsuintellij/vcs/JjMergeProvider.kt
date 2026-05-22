@@ -42,7 +42,7 @@ class JjMergeProvider(private val project: Project) : MergeProvider {
                 val lca = bytesOrEmpty("heads(ancestors(${parents[0]}) & ancestors(${parents[1]}))")
                 ORIGINAL = if (lca.isNotEmpty()) lca else bytesOrEmpty(parents[0])
             } else {
-                val parent = parents.firstOrNull() ?: JjRepository.FIRST_PARENT_REF
+                val parent = parents.firstOrNull() ?: JjRepository.WORKING_COPY_FIRST_PARENT_REVSET
                 val parentBytes = bytesOrEmpty(parent)
                 CURRENT = parentBytes
                 LAST = parentBytes

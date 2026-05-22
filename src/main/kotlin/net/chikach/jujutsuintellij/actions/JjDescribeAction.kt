@@ -8,16 +8,11 @@ import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vcs.changes.VcsDirtyScopeManager
-import com.intellij.ui.components.JBScrollPane
-import com.intellij.ui.components.JBTextArea
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
 import net.chikach.jujutsuintellij.repo.JjWorkingCopyCache
-import java.awt.Dimension
-import javax.swing.JComponent
 
 /**
  * Opens a dialog pre-filled with the current description of `@` and saves it via `jj describe -m`.
@@ -29,7 +24,7 @@ class JjDescribeAction : AnAction() {
         val repo = findRepo(e) ?: return
 
         val current = loadCurrentDescription(project, repo)
-        val dialog = DescribeDialog(project, current)
+        val dialog = DescribeDialog(project, current, "Describe Working Copy")
         if (!dialog.showAndGet()) return
 
         val newMessage = dialog.message
@@ -71,26 +66,5 @@ class JjDescribeAction : AnAction() {
         val manager = JjRepositoryManager.getInstance(project)
         return if (file != null) manager.getRepositoryForFile(file)
         else manager.getAll().firstOrNull()
-    }
-
-    private class DescribeDialog(project: Project, initialText: String) : DialogWrapper(project) {
-        private val textArea = JBTextArea(initialText, 8, 60).apply {
-            lineWrap = true
-            wrapStyleWord = true
-        }
-
-        val message: String get() = textArea.text
-
-        init {
-            title = "Describe Working Copy"
-            init()
-        }
-
-        override fun createCenterPanel(): JComponent =
-            JBScrollPane(textArea).apply {
-                preferredSize = Dimension(600, 200)
-            }
-
-        override fun getPreferredFocusedComponent(): JComponent = textArea
     }
 }
