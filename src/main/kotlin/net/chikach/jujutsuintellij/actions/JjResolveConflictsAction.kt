@@ -19,7 +19,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.vcs.log.VcsLogDataKeys
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
-import net.chikach.jujutsuintellij.repo.JjWorkingCopyCache
+import net.chikach.jujutsuintellij.caches.JjWorkingCopyCache
 import net.chikach.jujutsuintellij.repo.model.JjCommit
 import net.chikach.jujutsuintellij.vcs.JjConflictTracker
 import net.chikach.jujutsuintellij.vcs.JjMergeProvider

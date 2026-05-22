@@ -1,4 +1,4 @@
-package net.chikach.jujutsuintellij.repo
+package net.chikach.jujutsuintellij.caches
 
 import com.intellij.ide.ActivityTracker
 import com.intellij.openapi.Disposable
@@ -8,12 +8,13 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.util.concurrency.AppExecutorUtil
+import net.chikach.jujutsuintellij.repo.JjRepositoryManager
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 
 /**
- * Project-scoped cache for working-copy (`@`) state: its commit description and the nearest
+ * Project-scoped cache for working-copy (`@`) state: its commit id, description, and the nearest
  * ancestor bookmark ("current branch").
  *
  * [refresh] debounces requests by 200 ms and executes on the application's shared pooled executor.
@@ -30,6 +31,9 @@ import java.util.concurrent.TimeUnit
 class JjWorkingCopyCache(private val project: Project) : Disposable {
 
     @Volatile var description: String = ""
+        private set
+
+    @Volatile var commitId: String? = null
         private set
 
     @Volatile var currentBranch: String? = null
@@ -65,10 +69,17 @@ class JjWorkingCopyCache(private val project: Project) : Disposable {
         // Step 2: run jj CLI outside the read action (process execution not allowed inside one).
         var changed = false
 
-        val newDesc = runCatching { repo.workingCopyDescription() }.getOrNull()
-        if (newDesc != null && newDesc != description) {
-            description = newDesc
-            changed = true
+        // One `jj log -r @` call yields both the description and the commit id of the working copy.
+        runCatching { repo.workingCopyCommit() }.getOrNull()?.let { wc ->
+            val newDesc = wc.description.trimEnd()
+            if (newDesc != description) {
+                description = newDesc
+                changed = true
+            }
+            if (wc.commitId != commitId) {
+                commitId = wc.commitId
+                changed = true
+            }
         }
 
         runCatching { repo.currentBranch() }.onSuccess { newBranch ->

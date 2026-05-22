@@ -108,6 +108,9 @@ class JjCommands {
     fun abandon(repo: JjRepository, revset: String): JjCommandResult =
         execute(request(repo.rootPathNio, listOf("abandon", revset)))
 
+    fun edit(repo: JjRepository, revision: String): JjCommandResult =
+        execute(request(repo.rootPathNio, listOf("edit", revision)))
+
     fun getDescription(repo: JjRepository): JjCommandResult =
         execute(request(repo.rootPathNio, listOf("log", "--no-graph", "-r", "@", "-T", "description")))
 

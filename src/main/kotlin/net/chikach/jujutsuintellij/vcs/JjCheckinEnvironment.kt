@@ -12,7 +12,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import net.chikach.jujutsuintellij.repo.JjOperationException
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
-import net.chikach.jujutsuintellij.repo.JjWorkingCopyCache
+import net.chikach.jujutsuintellij.caches.JjWorkingCopyCache
 
 /**
  * Maps IntelliJ's "Commit" action onto `jj commit -m <message>`.

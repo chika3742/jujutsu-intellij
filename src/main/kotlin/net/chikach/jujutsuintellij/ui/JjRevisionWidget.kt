@@ -4,7 +4,7 @@ import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.actionSystem.ex.ComboBoxAction
 import net.chikach.jujutsuintellij.JujutsuBundle
-import net.chikach.jujutsuintellij.repo.JjWorkingCopyCache
+import net.chikach.jujutsuintellij.caches.JjWorkingCopyCache
 import net.chikach.jujutsuintellij.vcs.JujutsuVcs.Companion.isActiveIn
 import javax.swing.JComponent
 

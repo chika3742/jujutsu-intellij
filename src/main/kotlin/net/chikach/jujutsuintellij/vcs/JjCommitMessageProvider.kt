@@ -6,7 +6,7 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vcs.changes.LocalChangeList
 import com.intellij.vcs.commit.CommitMessageUi
 import com.intellij.vcs.commit.DelayedCommitMessageProvider
-import net.chikach.jujutsuintellij.repo.JjWorkingCopyCache
+import net.chikach.jujutsuintellij.caches.JjWorkingCopyCache
 
 /**
  * Pre-populates and live-syncs the Commit tool window message field with the current `@`'s

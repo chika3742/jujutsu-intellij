@@ -76,6 +76,11 @@ class JjRepository(
         commands().abandon(this, revset).orThrow("abandon")
     }
 
+    /** Sets [revision] as the working-copy commit (`jj edit`). */
+    fun edit(revision: String) {
+        commands().edit(this, revision).orThrow("edit")
+    }
+
     /** Reverts [relativePaths] in `@` to their parent state (`jj restore <paths>`). */
     fun restore(relativePaths: List<String>) {
         val normalized = relativePaths.map { normalizeRelativePath(it) }

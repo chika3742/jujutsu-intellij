@@ -13,7 +13,7 @@ import net.chikach.jujutsuintellij.JujutsuBundle
 import net.chikach.jujutsuintellij.caches.JjCommitCache
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
-import net.chikach.jujutsuintellij.repo.JjWorkingCopyCache
+import net.chikach.jujutsuintellij.caches.JjWorkingCopyCache
 import net.chikach.jujutsuintellij.repo.model.JjCommit
 import net.chikach.jujutsuintellij.repo.model.JjFileChange
 import net.chikach.jujutsuintellij.vcs.JjConflictTracker
