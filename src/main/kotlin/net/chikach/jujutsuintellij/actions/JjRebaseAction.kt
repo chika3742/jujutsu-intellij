@@ -22,7 +22,6 @@ abstract class JjRebaseAction(private val mode: RebaseMode, private val messageK
 
         runInBackground(
             project,
-            target.repo.root,
             JujutsuBundle.message("dialog.rebase.task"),
             JujutsuBundle.message("dialog.rebase.error"),
         ) {

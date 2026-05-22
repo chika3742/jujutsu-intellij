@@ -23,7 +23,6 @@ class JjLogDescribeAction : JjLogCommitAction() {
 
         runInBackground(
             project,
-            target.repo.root,
             JujutsuBundle.message("dialog.describe.task"),
             JujutsuBundle.message("dialog.describe.error"),
         ) {

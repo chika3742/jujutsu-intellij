@@ -8,13 +8,10 @@ import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vcs.ProjectLevelVcsManager
-import com.intellij.openapi.vcs.changes.VcsDirtyScopeManager
-import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.vcs.log.VcsLogDataKeys
-import com.intellij.vcs.log.impl.VcsProjectLog
+import net.chikach.jujutsuintellij.repo.JjChangeWatcher
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
-import net.chikach.jujutsuintellij.repo.JjWorkingCopyCache
 import net.chikach.jujutsuintellij.vcs.JujutsuVcs
 
 /**
@@ -44,17 +41,15 @@ abstract class JjLogCommitAction : AnAction() {
     }
 
     /**
-     * Runs [block] off the EDT, then refreshes the working-copy cache, marks everything dirty, and
-     * reloads the VCS Log for [root] (these operations rewrite the commit graph, so the log must be
+     * Runs [block] off the EDT, then refreshes the VCS Log, working-copy cache, and Local Changes via
+     * [JjChangeWatcher.forceRefresh] (these operations rewrite the commit graph, so the log must be
      * refreshed explicitly).
      */
-    protected fun runInBackground(project: Project, root: VirtualFile, title: String, errorTitle: String, block: () -> Unit) {
+    protected fun runInBackground(project: Project, title: String, errorTitle: String, block: () -> Unit) {
         object : Task.Backgroundable(project, title) {
             override fun run(indicator: ProgressIndicator) {
                 block()
-                JjWorkingCopyCache.getInstance(project).refresh()
-                VcsDirtyScopeManager.getInstance(project).markEverythingDirty()
-                VcsProjectLog.getInstance(project).dataManager?.refresh(listOf(root))
+                JjChangeWatcher.getInstance(project).forceRefresh()
             }
 
             override fun onThrowable(error: Throwable) {

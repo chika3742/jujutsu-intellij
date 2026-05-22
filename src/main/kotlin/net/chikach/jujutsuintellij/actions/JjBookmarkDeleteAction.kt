@@ -10,9 +10,9 @@ import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.Messages
-import com.intellij.openapi.vcs.changes.VcsDirtyScopeManager
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
+import net.chikach.jujutsuintellij.repo.JjChangeWatcher
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
 import java.awt.Dimension
@@ -47,7 +47,7 @@ class JjBookmarkDeleteAction : AnAction() {
         object : Task.Backgroundable(project, "Deleting Bookmark") {
             override fun run(indicator: ProgressIndicator) {
                 repo.deleteBookmark(selected)
-                VcsDirtyScopeManager.getInstance(project).markEverythingDirty()
+                JjChangeWatcher.getInstance(project).forceRefresh()
             }
 
             override fun onThrowable(error: Throwable) {

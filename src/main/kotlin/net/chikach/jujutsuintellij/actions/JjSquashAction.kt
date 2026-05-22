@@ -24,7 +24,6 @@ class JjSquashAction : JjLogCommitAction() {
 
         runInBackground(
             project,
-            target.repo.root,
             JujutsuBundle.message("dialog.squash.task"),
             JujutsuBundle.message("dialog.squash.error"),
         ) {

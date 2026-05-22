@@ -9,10 +9,9 @@ import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
-import com.intellij.openapi.vcs.changes.VcsDirtyScopeManager
+import net.chikach.jujutsuintellij.repo.JjChangeWatcher
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
-import net.chikach.jujutsuintellij.repo.JjWorkingCopyCache
 
 /**
  * Opens a dialog pre-filled with the current description of `@` and saves it via `jj describe -m`.
@@ -33,8 +32,7 @@ class JjDescribeAction : AnAction() {
         object : Task.Backgroundable(project, "Describing Working Copy") {
             override fun run(indicator: ProgressIndicator) {
                 repo.describe(newMessage)
-                JjWorkingCopyCache.getInstance(project).refresh()
-                VcsDirtyScopeManager.getInstance(project).markEverythingDirty()
+                JjChangeWatcher.getInstance(project).forceRefresh()
             }
 
             override fun onThrowable(error: Throwable) {

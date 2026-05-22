@@ -7,7 +7,7 @@ import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.ui.Messages
-import com.intellij.openapi.vcs.changes.VcsDirtyScopeManager
+import net.chikach.jujutsuintellij.repo.JjChangeWatcher
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
 
@@ -29,7 +29,7 @@ class JjBookmarkCreateAction : AnAction() {
         object : Task.Backgroundable(project, "Creating Bookmark") {
             override fun run(indicator: ProgressIndicator) {
                 repo.createBookmark(name)
-                VcsDirtyScopeManager.getInstance(project).markEverythingDirty()
+                JjChangeWatcher.getInstance(project).forceRefresh()
             }
 
             override fun onThrowable(error: Throwable) {

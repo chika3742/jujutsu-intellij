@@ -21,7 +21,6 @@ class JjLogAbandonAction : JjLogCommitAction() {
 
         runInBackground(
             project,
-            target.repo.root,
             JujutsuBundle.message("dialog.abandon.task"),
             JujutsuBundle.message("dialog.abandon.error"),
         ) {

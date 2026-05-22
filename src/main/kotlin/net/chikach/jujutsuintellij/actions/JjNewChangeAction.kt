@@ -7,10 +7,9 @@ import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.ui.Messages
-import com.intellij.openapi.vcs.changes.VcsDirtyScopeManager
+import net.chikach.jujutsuintellij.repo.JjChangeWatcher
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
-import net.chikach.jujutsuintellij.repo.JjWorkingCopyCache
 
 /**
  * Runs `jj new` to open a fresh working-copy commit after the current `@`.
@@ -25,8 +24,7 @@ class JjNewChangeAction : AnAction() {
         object : Task.Backgroundable(project, "Creating New Change") {
             override fun run(indicator: ProgressIndicator) {
                 repo.newChange()
-                JjWorkingCopyCache.getInstance(project).refresh()
-                VcsDirtyScopeManager.getInstance(project).markEverythingDirty()
+                JjChangeWatcher.getInstance(project).forceRefresh()
             }
 
             override fun onThrowable(error: Throwable) {

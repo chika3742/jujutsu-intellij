@@ -133,3 +133,7 @@ New IDE integrations (actions, services, file types, VCS handlers, etc.) are dec
 - Platform dependency is declared in `build.gradle.kts` via `intellijPlatform { intellijIdea("2025.2.4") }` — change the version string here to retarget.
 - `sinceBuild` in `build.gradle.kts` controls the minimum compatible IDE build number.
 - Use `testFramework(TestFrameworkType.Platform)` for UI/platform tests.
+
+### When you want to read the source of IntelliJ IDEA
+
+The source of IDEA Community is placed in `~/Documents/intellij-community`. Read when you want.

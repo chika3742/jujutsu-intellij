@@ -29,6 +29,7 @@
         <directoryIndexExcludePolicy implementation="net.chikach.jujutsuintellij.vcs.JjDirectoryIndexExcludePolicy"/>
         <treeStructureProvider implementation="net.chikach.jujutsuintellij.ui.JjProjectViewProvider"/>
         <postStartupActivity implementation="net.chikach.jujutsuintellij.vcs.JjGitCoexistence"/>
+        <postStartupActivity implementation="net.chikach.jujutsuintellij.repo.JjChangeWatcherStartup"/>
 
         <vcs.commitMessageProvider implementation="net.chikach.jujutsuintellij.vcs.JjCommitMessageProvider"/>
 
@@ -37,8 +38,6 @@
              which grays out every merge commit and would otherwise mask the conflict color. -->
         <logHighlighterFactory order="first"
                                implementation="net.chikach.jujutsuintellij.ui.log.JjLogStyleHighlighter$Factory"/>
-
-        <projectService serviceImplementation="net.chikach.jujutsuintellij.vcs.JjMergeProvider"/>
     </extensions>
 
     <actions resource-bundle="messages.JujutsuBundle">

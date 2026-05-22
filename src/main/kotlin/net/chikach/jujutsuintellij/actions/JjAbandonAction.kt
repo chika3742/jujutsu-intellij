@@ -7,10 +7,9 @@ import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.ui.Messages
-import com.intellij.openapi.vcs.changes.VcsDirtyScopeManager
+import net.chikach.jujutsuintellij.repo.JjChangeWatcher
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
-import net.chikach.jujutsuintellij.repo.JjWorkingCopyCache
 
 /**
  * Abandons the current working-copy commit (`@`) via `jj abandon @`.
@@ -33,8 +32,7 @@ class JjAbandonAction : AnAction() {
         object : Task.Backgroundable(project, "Abandoning Change") {
             override fun run(indicator: ProgressIndicator) {
                 repo.abandon()
-                JjWorkingCopyCache.getInstance(project).refresh()
-                VcsDirtyScopeManager.getInstance(project).markEverythingDirty()
+                JjChangeWatcher.getInstance(project).forceRefresh()
             }
 
             override fun onThrowable(error: Throwable) {

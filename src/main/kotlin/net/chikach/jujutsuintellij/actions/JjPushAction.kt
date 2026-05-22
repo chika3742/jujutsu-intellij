@@ -6,7 +6,7 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.ui.Messages
-import com.intellij.openapi.vcs.changes.VcsDirtyScopeManager
+import net.chikach.jujutsuintellij.repo.JjChangeWatcher
 import net.chikach.jujutsuintellij.repo.JjOperationException
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
 import net.chikach.jujutsuintellij.vcs.JujutsuVcs
@@ -34,7 +34,7 @@ class JjPushAction : AnAction() {
                 if (errors.isNotEmpty()) {
                     throw RuntimeException(errors.joinToString("\n"))
                 }
-                VcsDirtyScopeManager.getInstance(project).markEverythingDirty()
+                JjChangeWatcher.getInstance(project).forceRefresh()
             }
 
             override fun onThrowable(error: Throwable) {
