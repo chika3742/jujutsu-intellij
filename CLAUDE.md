@@ -134,6 +134,10 @@ New IDE integrations (actions, services, file types, VCS handlers, etc.) are dec
 - `sinceBuild` in `build.gradle.kts` controls the minimum compatible IDE build number.
 - Use `testFramework(TestFrameworkType.Platform)` for UI/platform tests.
 
-### When you want to read the source of IntelliJ IDEA
+### Documents
 
-The source of IDEA Community is placed in `~/Documents/intellij-community`. Read when you want.
+- The source of IDEA Community is placed in `~/Documents/intellij-community`.
+- Jujutsu Docs url is https://docs.jj-vcs.dev.
+  - CLI reference: https://docs.jj-vcs.dev/latest/cli-reference/
+  - Template language: https://docs.jj-vcs.dev/latest/templates/
+  - Revset language: https://docs.jj-vcs.dev/latest/revsets/

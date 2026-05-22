@@ -25,12 +25,19 @@ abstract class JjLogCommitAction : AnAction() {
 
     protected data class Target(val repo: JjRepository, val hash: String)
 
+    /** One or more commits selected in a single jj root. [revset] unions the hashes for jj. */
+    protected data class MultiTarget(val repo: JjRepository, val hashes: List<String>) {
+        val count: Int get() = hashes.size
+        val revset: String get() = hashes.joinToString("|")
+    }
+
     override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT
 
     override fun update(e: AnActionEvent) {
         e.presentation.isEnabledAndVisible = target(e) != null
     }
 
+    /** The single selected commit, or null unless exactly one jj-managed commit is selected. */
     protected fun target(e: AnActionEvent): Target? {
         val project = e.project ?: return null
         val commit = e.getData(VcsLogDataKeys.VCS_LOG_COMMIT_SELECTION)?.commits?.singleOrNull() ?: return null
@@ -38,6 +45,19 @@ abstract class JjLogCommitAction : AnAction() {
         if (vcs?.name != JujutsuVcs.VCS_NAME) return null
         val repo = JjRepositoryManager.getInstance(project).getRepositoryForRoot(commit.root)
         return Target(repo, commit.hash.asString())
+    }
+
+    /** The selected commits, or null unless one or more commits in a single jj root are selected. */
+    protected fun targets(e: AnActionEvent): MultiTarget? {
+        val project = e.project ?: return null
+        val commits = e.getData(VcsLogDataKeys.VCS_LOG_COMMIT_SELECTION)?.commits ?: return null
+        if (commits.isEmpty()) return null
+        val root = commits.first().root
+        if (commits.any { it.root != root }) return null  // single jj root only
+        val vcs = ProjectLevelVcsManager.getInstance(project).getVcsFor(root)
+        if (vcs?.name != JujutsuVcs.VCS_NAME) return null
+        val repo = JjRepositoryManager.getInstance(project).getRepositoryForRoot(root)
+        return MultiTarget(repo, commits.map { it.hash.asString() })
     }
 
     /**
