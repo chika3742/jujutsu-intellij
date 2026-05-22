@@ -8,16 +8,10 @@ import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.Messages
-import com.intellij.ui.components.JBList
-import com.intellij.ui.components.JBScrollPane
 import net.chikach.jujutsuintellij.repo.JjChangeWatcher
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
-import java.awt.Dimension
-import javax.swing.JComponent
-import javax.swing.ListSelectionModel
 
 /** Shows a list of local bookmarks and deletes the selected one via `jj bookmark delete`. */
 class JjBookmarkDeleteAction : AnAction() {
@@ -32,7 +26,7 @@ class JjBookmarkDeleteAction : AnAction() {
             return
         }
 
-        val dialog = BookmarkSelectDialog(project, bookmarks)
+        val dialog = BookmarkSelectDialog(project, bookmarks, "Select Bookmark to Delete")
         if (!dialog.showAndGet()) return
         val selected = dialog.selectedBookmark ?: return
 
@@ -83,24 +77,5 @@ class JjBookmarkDeleteAction : AnAction() {
             project,
         )
         return names
-    }
-
-    private class BookmarkSelectDialog(project: Project, bookmarks: List<String>) : DialogWrapper(project) {
-        private val list = JBList(bookmarks).apply {
-            selectionMode = ListSelectionModel.SINGLE_SELECTION
-            selectedIndex = 0
-        }
-
-        val selectedBookmark: String? get() = list.selectedValue
-
-        init {
-            title = "Select Bookmark to Delete"
-            init()
-        }
-
-        override fun createCenterPanel(): JComponent =
-            JBScrollPane(list).apply {
-                preferredSize = Dimension(300, 200)
-            }
     }
 }

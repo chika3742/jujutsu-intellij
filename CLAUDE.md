@@ -141,3 +141,7 @@ New IDE integrations (actions, services, file types, VCS handlers, etc.) are dec
   - CLI reference: https://docs.jj-vcs.dev/latest/cli-reference/
   - Template language: https://docs.jj-vcs.dev/latest/templates/
   - Revset language: https://docs.jj-vcs.dev/latest/revsets/
+
+### Important Principles
+
+- Research existing patterns and implement based on them.

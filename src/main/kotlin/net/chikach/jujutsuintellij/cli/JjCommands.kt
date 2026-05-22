@@ -138,6 +138,33 @@ class JjCommands {
     fun bookmarkDelete(repo: JjRepository, name: String): JjCommandResult =
         execute(request(repo.rootPathNio, listOf("bookmark", "delete", name)))
 
+    /**
+     * Creates or updates [name] to point at [revision] (`jj bookmark set`). [allowBackwards] adds
+     * `--allow-backwards`, which jj requires to move a bookmark backwards or sideways.
+     */
+    fun bookmarkSet(repo: JjRepository, name: String, revision: String, allowBackwards: Boolean = false): JjCommandResult {
+        val args = buildList {
+            add("bookmark"); add("set")
+            add("--revision"); add(revision)
+            if (allowBackwards) add("--allow-backwards")
+            add(name)
+        }
+        return execute(request(repo.rootPathNio, args))
+    }
+
+    fun bookmarkRename(repo: JjRepository, oldName: String, newName: String): JjCommandResult =
+        execute(request(repo.rootPathNio, listOf("bookmark", "rename", oldName, newName)))
+
+    /** Drops [name] locally without recording a deletion to push (`jj bookmark forget`). */
+    fun bookmarkForget(repo: JjRepository, name: String): JjCommandResult =
+        execute(request(repo.rootPathNio, listOf("bookmark", "forget", name)))
+
+    fun bookmarkTrack(repo: JjRepository, name: String, remote: String): JjCommandResult =
+        execute(request(repo.rootPathNio, listOf("bookmark", "track", "$name@$remote")))
+
+    fun bookmarkUntrack(repo: JjRepository, name: String, remote: String): JjCommandResult =
+        execute(request(repo.rootPathNio, listOf("bookmark", "untrack", "$name@$remote")))
+
     fun gitFetch(repo: JjRepository, remote: String? = null): JjCommandResult {
         val args = buildList {
             add("git")

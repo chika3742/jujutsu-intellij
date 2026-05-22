@@ -9,7 +9,7 @@ import java.util.concurrent.ConcurrentHashMap
 @Service(Service.Level.PROJECT)
 class JjCommitCache {
 
-    data class Info(val description: String, val isRoot: Boolean)
+    data class Info(val description: String, val isRoot: Boolean, val bookmarks: List<String>)
 
     private val infos = ConcurrentHashMap<String, Info>()
 
@@ -20,7 +20,7 @@ class JjCommitCache {
     }
 
     fun record(commit: JjCommit) {
-        infos[commit.commitId] = Info(commit.description, commit.isRoot)
+        infos[commit.commitId] = Info(commit.description, commit.isRoot, commit.bookmarks)
     }
 
     fun get(hash: String): Info? =

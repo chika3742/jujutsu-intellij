@@ -49,6 +49,15 @@ class JjRepositoryManager(private val project: Project) {
         return repositories.values.toList()
     }
 
+    /**
+     * Returns the jj repository whose root contains [absolutePath], or null if none does.
+     *
+     * Unlike [getRepositoryForFile] this resolves purely by path containment, so it works for files
+     * that [ProjectLevelVcsManager.getVcsFor] declines to map.
+     */
+    fun getRepositoryContaining(absolutePath: String): JjRepository? =
+        getAll().firstOrNull { it.containsPath(absolutePath) }
+
     fun invalidate(root: VirtualFile) {
         repositories.remove(root)
     }

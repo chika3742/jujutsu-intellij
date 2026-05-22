@@ -23,7 +23,7 @@ class JjMergeProvider(private val project: Project) : MergeProvider {
 
     @Throws(VcsException::class)
     override fun loadRevisions(file: VirtualFile): MergeData {
-        val repo = JjRepositoryManager.getInstance(project).getRepositoryForFile(file)
+        val repo = JjRepositoryManager.getInstance(project).getRepositoryContaining(file.path)
             ?: throw VcsException("Not under a Jujutsu repository: ${file.path}")
         val rel = repo.relativize(file.path)
             ?: throw VcsException("Cannot relativize ${file.path}")

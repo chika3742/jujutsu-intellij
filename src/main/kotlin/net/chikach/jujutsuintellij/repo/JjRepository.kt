@@ -167,6 +167,31 @@ class JjRepository(
         commands().bookmarkDelete(this, name).orThrow("bookmark delete")
     }
 
+    /**
+     * Creates or moves [name] to [revision] (`jj bookmark set`). Set [allowBackwards] to permit
+     * moving a bookmark backwards or sideways (jj refuses this by default).
+     */
+    fun setBookmark(name: String, revision: String, allowBackwards: Boolean = false) {
+        commands().bookmarkSet(this, name, revision, allowBackwards).orThrow("bookmark set")
+    }
+
+    fun renameBookmark(oldName: String, newName: String) {
+        commands().bookmarkRename(this, oldName, newName).orThrow("bookmark rename")
+    }
+
+    /** Drops [name] locally without recording a deletion to push (`jj bookmark forget`). */
+    fun forgetBookmark(name: String) {
+        commands().bookmarkForget(this, name).orThrow("bookmark forget")
+    }
+
+    fun trackBookmark(name: String, remote: String) {
+        commands().bookmarkTrack(this, name, remote).orThrow("bookmark track")
+    }
+
+    fun untrackBookmark(name: String, remote: String) {
+        commands().bookmarkUntrack(this, name, remote).orThrow("bookmark untrack")
+    }
+
     // ─── Config ─────────────────────────────────────────────────────────────
 
     /** Returns the config value at [key], or `null` if unset / not retrievable. */
