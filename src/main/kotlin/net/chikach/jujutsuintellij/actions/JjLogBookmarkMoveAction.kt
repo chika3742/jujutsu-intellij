@@ -65,15 +65,15 @@ class JjLogBookmarkMoveAction : JjLogCommitAction() {
         return allow
     }
 
+    /** Local bookmark names ordered by their commit's committer date, most recent first. */
     private fun loadLocalBookmarks(project: Project, repo: JjRepository): List<String> {
         var names = emptyList<String>()
         ProgressManager.getInstance().runProcessWithProgressSynchronously(
             {
-                names = repo.listBookmarks(revset = "bookmarks()")
+                names = repo.listBookmarks(revset = "bookmarks()", sortByCommitterDate = true)
                     .filter { it.isLocal }
                     .map { it.name }
                     .distinct()
-                    .sorted()
             },
             JujutsuBundle.message("dialog.bookmark.loading"),
             false,

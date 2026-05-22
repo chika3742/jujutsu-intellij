@@ -3,6 +3,8 @@ package net.chikach.jujutsuintellij.ui
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.actionSystem.ex.ComboBoxAction
+import com.intellij.openapi.ui.popup.JBPopup
+import com.intellij.openapi.ui.popup.JBPopupFactory
 import net.chikach.jujutsuintellij.JujutsuBundle
 import net.chikach.jujutsuintellij.caches.JjWorkingCopyCache
 import net.chikach.jujutsuintellij.vcs.JujutsuVcs.Companion.isActiveIn
@@ -36,12 +38,27 @@ class JjRevisionWidget : ComboBoxAction() {
     }
 
     override fun createPopupActionGroup(button: JComponent, dataContext: DataContext): DefaultActionGroup {
+        val project = dataContext.getData(CommonDataKeys.PROJECT) ?: return DefaultActionGroup()
         val am = ActionManager.getInstance()
         return DefaultActionGroup().apply {
             add(am.getAction("Jujutsu.NewChange"))
             add(am.getAction("Jujutsu.Describe"))
+            addSeparator()
+            addAll(buildJjToolbarPopupGroup(project).childActionsOrStubs.toList())
         }
     }
+
+    // Enable speed search so the bookmark list can be filtered by typing.
+    override fun createActionPopup(group: DefaultActionGroup, context: DataContext, disposeCallback: Runnable?): JBPopup =
+        JBPopupFactory.getInstance().createActionGroupPopup(
+            null,
+            group,
+            context,
+            JBPopupFactory.ActionSelectionAid.SPEEDSEARCH,
+            true,
+            disposeCallback,
+            -1,
+        )
 
     companion object {
         private const val MAX_LEN = 40

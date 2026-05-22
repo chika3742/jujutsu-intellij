@@ -13,6 +13,7 @@ import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.intellij.vcs.log.impl.VcsProjectLog
+import net.chikach.jujutsuintellij.caches.JjBookmarkCache
 import net.chikach.jujutsuintellij.caches.JjWorkingCopyCache
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.ScheduledFuture
@@ -85,6 +86,7 @@ class JjChangeWatcher(private val project: Project) : Disposable {
             VcsProjectLog.getInstance(project).dataManager?.refresh(roots)
         }
         JjWorkingCopyCache.getInstance(project).refresh()
+        JjBookmarkCache.getInstance(project).reload()
         VcsDirtyScopeManager.getInstance(project).markEverythingDirty()
     }
 

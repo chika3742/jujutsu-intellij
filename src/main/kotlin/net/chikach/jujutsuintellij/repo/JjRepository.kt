@@ -145,8 +145,8 @@ class JjRepository(
     /**
      * Returns all bookmark / tag refs as one [JjCommitRef] per (name, remote?) pair.
      */
-    fun listBookmarks(revset: String? = null): List<JjCommitRef> =
-        commands().bookmarkList(this, revset)
+    fun listBookmarks(revset: String? = null, sortByCommitterDate: Boolean = false): List<JjCommitRef> =
+        commands().bookmarkList(this, revset, sortKeys = if (sortByCommitterDate) "committer-date-" else null)
 
     fun listBookmarksByCommitId(commitId: String): List<JjCommitRef> =
         listBookmarks("descendants(${commitId})")
@@ -213,8 +213,8 @@ class JjRepository(
         commands().gitFetch(this, remote).orThrow("git fetch")
     }
 
-    fun gitPush(bookmark: String? = null, remote: String? = null) {
-        commands().gitPush(this, bookmark, remote).orThrow("git push")
+    fun gitPush(bookmarks: List<String> = emptyList(), remote: String? = null) {
+        commands().gitPush(this, bookmarks, remote).orThrow("git push")
     }
 
     /** `jj rebase` revision-selection mode: `-r` moves only the revisions, `-s` adds descendants. */

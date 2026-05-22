@@ -13,6 +13,7 @@ class JjChangeWatcherStartup : ProjectActivity {
         val watcher = JjChangeWatcher.getInstance(project)
         ProjectLevelVcsManager.getInstance(project).runAfterInitialization {
             watcher.startWatching()
+            watcher.forceRefresh() // populate the working-copy / bookmark caches for the toolbar widget
         }
     }
 }
