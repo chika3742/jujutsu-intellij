@@ -59,6 +59,8 @@
                 class="net.chikach.jujutsuintellij.actions.JjResolveConflictsAction"/>
         <action id="Jujutsu.Edit"
                 class="net.chikach.jujutsuintellij.actions.JjEditAction"/>
+        <action id="Jujutsu.Log.New"
+                class="net.chikach.jujutsuintellij.actions.JjLogNewAction"/>
         <action id="Jujutsu.Log.BookmarkCreate"
                 class="net.chikach.jujutsuintellij.actions.JjLogBookmarkCreateAction"/>
         <action id="Jujutsu.Log.BookmarkMove"
@@ -130,6 +132,7 @@
 
         <group id="Jujutsu.LogContextMenu">
             <reference ref="Jujutsu.Edit"/>
+            <reference ref="Jujutsu.Log.New"/>
             <reference ref="Jujutsu.ResolveConflicts"/>
             <separator/>
             <reference ref="Jujutsu.Log.Describe"/>

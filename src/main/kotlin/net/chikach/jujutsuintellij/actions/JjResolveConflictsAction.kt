@@ -13,13 +13,12 @@ import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vcs.AbstractVcsHelper
-import com.intellij.openapi.vcs.changes.VcsDirtyScopeManager
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.vcs.log.VcsLogDataKeys
+import net.chikach.jujutsuintellij.repo.JjChangeWatcher
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
-import net.chikach.jujutsuintellij.caches.JjWorkingCopyCache
 import net.chikach.jujutsuintellij.repo.model.JjCommit
 import net.chikach.jujutsuintellij.vcs.JjConflictTracker
 import net.chikach.jujutsuintellij.vcs.JjMergeProvider
@@ -56,8 +55,7 @@ class JjResolveConflictsAction : AnAction() {
                 ApplicationManager.getApplication().invokeLater {
                     AbstractVcsHelper.getInstance(project)
                         .showMergeDialog(files, project.service<JjMergeProvider>())
-                    VcsDirtyScopeManager.getInstance(project).markEverythingDirty()
-                    JjWorkingCopyCache.getInstance(project).refresh()
+                    JjChangeWatcher.getInstance(project).forceRefresh()
                 }
             }
 
