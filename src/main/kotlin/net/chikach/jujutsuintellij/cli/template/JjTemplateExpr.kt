@@ -12,8 +12,6 @@ sealed interface SerializableTemplateExpr : TemplateExpr, SerializableExpr
 
 sealed interface StringExpr : SerializableTemplateExpr
 
-sealed interface IntegerExpr : SerializableTemplateExpr
-
 sealed interface BooleanExpr : SerializableTemplateExpr
 
 sealed interface TimestampExpr : SerializableTemplateExpr
@@ -94,7 +92,6 @@ private open class RenderedExpr(private val source: String) : JjTemplateExpr {
 private class RenderedTemplateExpr(source: String) : RenderedExpr(source), TemplateExpr
 private class RenderedSerializableTemplateExpr(source: String) : RenderedExpr(source), SerializableTemplateExpr
 private class RenderedStringExpr(source: String) : RenderedExpr(source), StringExpr
-private class RenderedIntegerExpr(source: String) : RenderedExpr(source), IntegerExpr
 private class RenderedBooleanExpr(source: String) : RenderedExpr(source), BooleanExpr
 private class RenderedTimestampExpr(source: String) : RenderedExpr(source), TimestampExpr
 private class RenderedCommitExpr(source: String) : RenderedExpr(source), CommitExpr
@@ -140,10 +137,6 @@ fun json(value: SerializableExpr): StringExpr = RenderedStringExpr(functionCall(
 fun templateExpr(source: String): TemplateExpr = RenderedTemplateExpr(source)
 
 fun serializableTemplateExpr(source: String): SerializableTemplateExpr = RenderedSerializableTemplateExpr(source)
-
-fun integerExpr(source: String): IntegerExpr = RenderedIntegerExpr(source)
-
-fun booleanExpr(source: String): BooleanExpr = RenderedBooleanExpr(source)
 
 fun commitExpr(source: String): CommitExpr = RenderedCommitExpr(source)
 
@@ -218,8 +211,6 @@ fun TimestampExpr.iso8601(): StringExpr =
     RenderedStringExpr(methodCall(this, "format", literal("%+")))
 
 fun AnnotationLineExpr.commit(): CommitExpr = RenderedCommitExpr(methodCall(this, "commit"))
-
-fun AnnotationLineExpr.lineNumber(): IntegerExpr = RenderedIntegerExpr(methodCall(this, "line_number"))
 
 fun CommitRefExpr.name(): StringExpr = RenderedStringExpr(methodCall(this, "name"))
 
