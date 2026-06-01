@@ -2,10 +2,7 @@ package net.chikach.jujutsuintellij.actions
 
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
-import com.intellij.openapi.actionSystem.ActionUpdateThread
-import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
-import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.progress.ProgressIndicator
@@ -18,7 +15,6 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.vcs.log.VcsLogDataKeys
 import net.chikach.jujutsuintellij.repo.JjChangeWatcher
 import net.chikach.jujutsuintellij.repo.JjRepository
-import net.chikach.jujutsuintellij.repo.JjRepositoryManager
 import net.chikach.jujutsuintellij.repo.model.JjCommit
 import net.chikach.jujutsuintellij.vcs.JjConflictTracker
 import net.chikach.jujutsuintellij.vcs.JjMergeProvider
@@ -29,7 +25,7 @@ import net.chikach.jujutsuintellij.vcs.JjMergeProvider
  *
  * Entry points: VCS Log right-click, Jujutsu menu, status-bar popup.
  */
-class JjResolveConflictsAction : AnAction() {
+class JjResolveConflictsAction : JjRepositoryAction() {
 
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
@@ -65,8 +61,6 @@ class JjResolveConflictsAction : AnAction() {
         }.queue()
     }
 
-    override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT
-
     override fun update(e: AnActionEvent) {
         val project = e.project
         if (project == null || findRepo(e) == null) {
@@ -82,14 +76,6 @@ class JjResolveConflictsAction : AnAction() {
         // Menu / status-bar context: stay enabled; the background task short-circuits with a
         // balloon when `@` has no conflicts.
         e.presentation.isEnabledAndVisible = true
-    }
-
-    private fun findRepo(e: AnActionEvent): JjRepository? {
-        val project = e.project ?: return null
-        val file = e.getData(CommonDataKeys.VIRTUAL_FILE)
-        val manager = JjRepositoryManager.getInstance(project)
-        return if (file != null) manager.getRepositoryForFile(file)
-        else manager.getAll().firstOrNull()
     }
 
     private fun selectedCommitHash(e: AnActionEvent): String? =

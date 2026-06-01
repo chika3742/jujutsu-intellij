@@ -13,6 +13,7 @@ import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import net.chikach.jujutsuintellij.JujutsuBundle
+import net.chikach.jujutsuintellij.actions.runJjInBackground
 import net.chikach.jujutsuintellij.caches.JjBookmarkCache
 import net.chikach.jujutsuintellij.repo.JjChangeWatcher
 import net.chikach.jujutsuintellij.repo.JjOperationException
@@ -137,19 +138,9 @@ private class DeleteBookmarkAction(private val repo: JjRepository, private val n
     }
 }
 
-/** Runs [block] off the EDT, then refreshes via [JjChangeWatcher]; shows [errorTitle] on failure. */
-private fun runJjOp(project: Project, title: String, errorTitle: String, block: () -> Unit) {
-    object : Task.Backgroundable(project, title) {
-        override fun run(indicator: ProgressIndicator) {
-            block()
-            JjChangeWatcher.getInstance(project).forceRefresh()
-        }
-
-        override fun onThrowable(error: Throwable) {
-            Messages.showErrorDialog(project, error.message, errorTitle)
-        }
-    }.queue()
-}
+/** @see net.chikach.jujutsuintellij.actions.runJjInBackground */
+private fun runJjOp(project: Project, title: String, errorTitle: String, block: () -> Unit) =
+    runJjInBackground(project, title, errorTitle, block)
 
 private fun confirmAllowBackwards(project: Project, name: String): Boolean {
     var allow = false
