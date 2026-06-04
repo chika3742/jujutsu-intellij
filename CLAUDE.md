@@ -53,7 +53,7 @@ caller (provider / action / UI)
 
 `JjCommands` and `JjJsonCommand` are marked `@ApiStatus.Internal`. The one intentional exception to the layering rule is `JjVersion.detect()`, which calls `JjCommands.version(path)` before any repo is determined.
 
-`JjCommands` exposes typed methods that return domain objects directly (e.g. `recentLog(repo, count): List<JjLogEntry>`,
+`JjCommands` exposes typed methods that return domain objects directly (e.g. `recentLog(repo, count): List<JjCommit>`,
 `fileHistory(repo, rel, revset): List<JjHistoryEntry>`). Templates are not passed in; each command resolves the template
 from the corresponding model's companion object (see "Template system" below). JSON decoding is done by
 `JjJsonCommand.executeJsonList<T>(request)` which is `inline fun <reified T>` and uses
@@ -61,13 +61,13 @@ from the corresponding model's companion object (see "Template system" below). J
 
 **`JjRepository` use cases** (in `repo/JjRepository.kt`):
 
-- Working copy: `workingCopyDescription()`, `describe(msg)`, `newChange()`, `commit(msg)` (uses `jj commit`), `abandon(revset)`, `restore(fromRev, paths)`.
+- Working copy: `workingCopyDescription()`, `describe(msg, rev?)`, `newChange(rev?)`, `commit(msg)` (sets the description on `@` and creates a new working-copy on top — i.e. describe + new), `abandon(revset)`, `edit(rev)`, `restore(paths)` (restores `@` files to their `@-` parent state), `squash(from, into)`, `rebase(revisions, destination, mode)`.
 - Diff: `workingCopyChanges()` → `List<JjFileChange>`, `diffSummary(from, to)`.
 - File: `fileHistory(rel)`, `annotateFile(rel, rev?)`, `showFile(rev, rel)`.
-- Log: `recentLog(N)`, `allTimedCommits()`, `logByIds(ids)`.
-- Bookmarks: `listBookmarks()` (uses `jj bookmark list -T <json>`), `bookmarksForLog()`, `createBookmark`, `deleteBookmark`, `setBookmark`.
+- Log: `recentLog(N)`, `allTimedCommits()`, `logByIds(ids)`, `logByRevset(revset)`, `workingCopyCommit()`, `workingCopyConflictedFiles()` — all returning `JjCommit`.
+- Bookmarks: `listBookmarks()` (uses `jj bookmark list -T <json>`), `listBookmarksByCommitId(id)`, `currentBranch()`, `createBookmark`, `deleteBookmark`, `setBookmark`, `renameBookmark`, `forgetBookmark`, `trackBookmark`, `untrackBookmark` — returning `JjCommitRef`.
 - Config: `configGet(key)`, `currentUser()`.
-- Git: `gitFetch(remote?)`, `gitPush(bookmark?, remote?)`.
+- Git: `gitFetch(remote?)`, `gitPush(bookmarks, remote?)`.
 
 Mutation methods throw `JjOperationException` on CLI failure; reads return domain objects or `null` for "missing config" / "empty result" cases.
 
@@ -78,25 +78,35 @@ Mutation methods throw `JjOperationException` on CLI failure; reads return domai
 
 ### Domain model (`repo/model/`)
 
-Public domain types returned from `JjRepository` — `JjLogEntry`, `JjTimedCommit`, `JjHistoryEntry`, `JjAnnotationLine`, `JjFileChange`, `JjBookmark` (with `JjBookmarkRemoteRef`), `JjBookmarkLogRef`, `JjUser`.
+Public domain types returned from `JjRepository` — `JjCommit` (log entry), `JjCommitRef` (bookmark/tag ref), `JjHistoryEntry`, `JjAnnotationLine`, `JjFileChange`, `JjUser`.
 
 Types backed by NDJSON output from `jj` are annotated with `kotlinx.serialization` `@Serializable` and carry their own jj template in a `companion object` as `TEMPLATE: String`. JSON keys typically match Kotlin field names; `@SerialName("timestamp")` is used on `JjHistoryEntry.date` / `JjAnnotationLine.date` to match the template. `Date` fields use `@Serializable(with = JjDateSerializer::class)` to decode ISO 8601 strings (jj `Timestamp.format("%+")` output). Author display strings come from the top-level `formatAuthor(authorName, authorEmail)` helper in `repo/model/JjAuthor.kt`, exposed as the `.author` computed property on `JjHistoryEntry` / `JjAnnotationLine`.
 
-For bookmarks, the jj template yields a flat row per `{name, remote, commitId}`; the internal `@Serializable` row type is `cli/JjBookmarkRefRow.kt` and `JjRepository.listBookmarks()` groups them into `JjBookmark` (local + remotes).
+For bookmarks, the `commitRefJsonLine` template yields one flat row per ref, decoded directly into `JjCommitRef`; `JjRepository.listBookmarks()` returns the list of refs.
 
 ### Template system (`cli/template/`)
 
 jj has no built-in JSON output flag; the plugin builds jj template strings programmatically:
 
 - `JjTemplateExpr.kt` — sealed type hierarchy (`StringExpr`, `IntegerExpr`, `BooleanExpr`, `CommitExpr`, `CommitRefExpr`, `AnnotationLineExpr`, `ListExpr<T>`, `LambdaExpr<...>`, etc.) with extension functions that render to jj template syntax.
-- `JjJsonTemplate.kt` — `JjJsonValue` types (`obj`, `arr`, `string`, `num`, `bool`, `serialized`) that compose template expressions into JSON-producing jj templates. Three entry points: `JjTemplates.commitJsonLine {}`, `annotationJsonLine {}`, `bookmarkRefJsonLine {}`.
+- `JjJsonTemplate.kt` — `JjJsonValue` types (`obj`, `string`, `bool`, `serialized`) that compose template expressions into JSON-producing jj templates. Three entry points on `object JjTemplates`: `commitJsonLine {}`, `annotationJsonLine {}`, `commitRefJsonLine {}`.
 - `lambda(::commitExpr) { it.commitId() }` builds typed `LambdaExpr` values from Kotlin lambdas. Use with `ListExpr.map(...)` for `.map(|p| ...)`-style jj template expressions.
 - `serialized(list: ListExpr<SerializableExpr>)` emits a JSON array via jj's `json()` function. Used for `parents` → `["<id1>","<id2>"]`. For convenience, `ListExpr<CommitExpr>.commitIds()` maps each parent commit to its `commit_id()`.
 - `TimestampExpr.iso8601()` renders `<ts>.format("%+")` so the JSON value is RFC 3339 / ISO 8601 — `JjDateSerializer` parses this single format with `DateTimeFormatter.ISO_OFFSET_DATE_TIME`.
 
 Example: `JjTemplates.commitJsonLine { obj { "commitId" to string(commitId); "parentIds" to serialized(parents.commitIds()); "authorTime" to string(author.timestamp().iso8601()) } }` produces a jj template that emits one `{"commitId":"<id>","parentIds":["<p1>","<p2>"],"authorTime":"2025-…+09:00"}\n` line per commit.
 
-Templates are owned by their corresponding `@Serializable` domain types (`JjLogEntry.TEMPLATE`, `JjTimedCommit.TEMPLATE`, `JjHistoryEntry.TEMPLATE`, `JjAnnotationLine.TEMPLATE`, `JjBookmarkRefRow.TEMPLATE`). `JjCommands` references them directly; `JjRepository`, providers, and UI never pass templates around.
+Templates are owned by their corresponding `@Serializable` domain types (`JjCommit.TEMPLATE`, `JjCommitRef.TEMPLATE`, `JjHistoryEntry.TEMPLATE`, `JjAnnotationLine.TEMPLATE`). `JjCommands` references them directly; `JjRepository`, providers, and UI never pass templates around.
+
+### Actions layer (`actions/`)
+
+User-facing actions extend one of two base classes (both route work through `JjRepository` and share the off-EDT helper `runJjInBackground(project, title, errorTitle, block)`, which runs the block in a background task, calls `JjChangeWatcher.forceRefresh()`, and shows an error dialog on failure):
+
+- **`JjRepositoryAction`** — for non-log actions (toolbar / main menu / project view). Resolves the repo from the file context via `findRepo(e)`, with a default `update` that enables the action when a repo resolves.
+- **`JjLogCommitAction`** — for actions invoked on a VCS Log selection; exposes the selected commit(s) as the target.
+- **`JjRebaseAction`** — `JjLogCommitAction` specialization parameterized by `RebaseMode` (`-r` / `-s`).
+
+New actions extend the matching base and are registered in `plugin.xml` under `<actions>` (groups `Jujutsu.Menu`, `Jujutsu.ContextMenu`, `Jujutsu.LogContextMenu`).
 
 ### VCS provider implementations (`vcs/`)
 
@@ -108,16 +118,27 @@ All providers go through `JjRepository`:
 - **`JjHistoryProvider`** / **`JjAnnotationProvider`** — call `repo.fileHistory(rel)` / `repo.annotateFile(rel, rev)`; receive `List<JjHistoryEntry>` / `List<JjAnnotationLine>` directly.
 - **`JjDiffProvider`** / **`JjContentRevision`** / **`JjFileRevision`** — diff support; `JjContentRevision`/`JjFileRevision` lazily call `repo.showFile(rev, rel)` for file content at a specific revision.
 - **`JjGitCoexistence`** — startup activity that detects co-located git+jj roots and redirects the VCS mapping from Git to Jujutsu (unless `enableGitDualMode` is set).
+- Others: **`JjRootChecker`** (`.jj` root detection), **`JjDirectoryIndexExcludePolicy`** (excludes `.jj` from indexing), **`JjMergeProvider`** (conflict resolution), **`JjUpdateEnvironment`** (Update Project), **`JjCommitMessageProvider`** (prefills the commit message), **`JjFileAnnotation`** (blame UI model), and **`JjConflictTracker`** (project service tracking conflicted files).
 
 ### UI layer (`ui/`)
 
-- **`JjLogProvider`** — implements `VcsLogProvider` using `repo.recentLog(N)` / `repo.allTimedCommits()` / `repo.logByIds(ids)` / `repo.bookmarksForLog()` / `repo.currentUser()`.
-- **`JjStatusBarWidget`** — status bar entry showing the working-copy description (`@`). Refreshes via `JjWorkingCopyDescription`, which debounces background `repo.workingCopyDescription()` calls by 200 ms.
-- **`JjRevisionWidget`** — toolbar action added to `MainToolbarLeft`.
+- **`ui/log/JjLogProvider`** — implements `VcsLogProvider` using `repo.recentLog(N)` / `repo.allTimedCommits()` / `repo.logByIds(ids)` / `repo.listBookmarks()` / `repo.currentUser()`. Accompanied by **`JjLogRefManager`**, **`JjLogStyleHighlighter`** (commit coloring), and **`JjBookmarkRefType`**.
+- **`JjRevisionWidget`** — toolbar action added to `MainToolbarLeft`; shows the working-copy (`@`) description and opens **`JjToolbarPopup`** (bookmark menu). Reads from the `caches/` layer (see below) rather than calling the CLI directly.
+- **`JjProjectViewProvider`** — hides the `.jj` directory in the Project View.
+
+### Caches (`caches/`)
+
+Project services that hold `jj` results so the UI can read them off the EDT without re-shelling:
+
+- **`JjWorkingCopyCache`** — the `@` description / commit id / current branch, refreshed in the background with a 200 ms debounce and pushed to listeners on the EDT.
+- **`JjCommitCache`** — commit id → description / bookmarks.
+- **`JjBookmarkCache`** — local bookmark names.
+
+Refresh is driven by `repo/JjChangeWatcher` (+ `JjChangeWatcherStartup`, a `postStartupActivity`): because `.jj` is excluded and emits no VFS events, the cache is refreshed on window focus and after each jj operation.
 
 ### Settings
 
-`JujutsuAppSettings` (app-level persistent state in `jujutsu.xml`) stores: `executablePath`, `commandTimeoutMs` (default 30 s), `defaultLogRevset` (default `::@`), and `enableGitDualMode`. Auto-detection is performed by `JujutsuExecutableDetector` and cached for the session.
+`JujutsuAppSettings` (app-level persistent state in `jujutsu.xml`) stores: `executablePath`, `commandTimeoutMs` (default 30 s), `defaultLogRevset` (default `::@`), and `enableGitDualMode`. `JujutsuProjectSettings` (project-level) stores a `customLogRevset` that overrides `defaultLogRevset` when set. Auto-detection is performed by `JujutsuExecutableDetector` and cached for the session; the settings UI is `JujutsuConfigurable` (Settings > Tools > Jujutsu).
 
 ### Repository/path handling
 
@@ -134,6 +155,10 @@ New IDE integrations (actions, services, file types, VCS handlers, etc.) are dec
 - `sinceBuild` in `build.gradle.kts` controls the minimum compatible IDE build number.
 - Use `testFramework(TestFrameworkType.Platform)` for UI/platform tests.
 
+### Tests
+
+`src/test` holds `cli/JjJsonParsingTest`, `cli/template/JjTemplatesTest`, `repo/JjPathUtilTest`, and `vcs/JjConflictTrackerTest`. Because the build cache can mask uncompiled tests, run test verification with `--rerun-tasks` rather than trusting an `UP-TO-DATE` result.
+
 ### Documents
 
 - The source of IDEA Community is placed in `~/Documents/intellij-community`.
@@ -144,4 +169,7 @@ New IDE integrations (actions, services, file types, VCS handlers, etc.) are dec
 
 ### Important Principles
 
-- Research existing patterns and implement based on them.
+- Research existing patterns and follow them faithfully.
+- Write all comments in English.
+- Name variables, functions, etc. so their intent is conveyed accurately; do not abbreviate, but avoid overly long names.
+- After changing behavior or fixing a bug, always update the tests accordingly.
