@@ -1,5 +1,7 @@
 package net.chikach.jujutsuintellij.actions
 
+import com.intellij.notification.NotificationGroupManager
+import com.intellij.notification.NotificationType
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -58,4 +60,12 @@ internal fun runJjInBackground(project: Project, title: String, errorTitle: Stri
             Messages.showErrorDialog(project, error.message, errorTitle)
         }
     }.queue()
+}
+
+/** Shows an informational notification in the "Jujutsu" notification group. */
+internal fun notifyJjInfo(project: Project, content: String) {
+    NotificationGroupManager.getInstance()
+        .getNotificationGroup("Jujutsu")
+        .createNotification(content, NotificationType.INFORMATION)
+        .notify(project)
 }

@@ -1,10 +1,14 @@
 package net.chikach.jujutsuintellij.cli
 
 import net.chikach.jujutsuintellij.repo.model.JjAnnotationLine
+import net.chikach.jujutsuintellij.repo.model.JjCommit
+import net.chikach.jujutsuintellij.repo.model.JjCommitRef
 import net.chikach.jujutsuintellij.repo.model.JjHistoryEntry
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class JjJsonParsingTest {
 
@@ -46,5 +50,38 @@ class JjJsonParsingTest {
         assertEquals("abc", entries[0].commitId)
         assertEquals("Alice <alice@example.com>", entries[0].author)
         assertEquals("bot@example.com", entries[1].author)
+    }
+
+    @Test
+    fun `parses bookmark refs with tracking status`() {
+        val refs = JjJsonParser.parseList<JjCommitRef>(
+            """
+            {"name":"main","remote":null,"commitId":"abc","tracked":false}
+            {"name":"main","remote":"origin","commitId":"abc","tracked":true}
+            {"name":"feature","remote":"origin","commitId":"def","tracked":false}
+            """.trimIndent(),
+            "jj bookmark list",
+        )
+
+        assertEquals(3, refs.size)
+        assertTrue(refs[0].isLocal)
+        assertFalse(refs[0].tracked)
+        assertTrue(refs[1].isTrackedRemote)
+        assertFalse(refs[2].isLocal)
+        assertFalse(refs[2].tracked)
+    }
+
+    @Test
+    fun `parses commit with tracked and untracked remote bookmarks`() {
+        val commits = JjJsonParser.parseList<JjCommit>(
+            """
+            {"commitId":"abc","changeId":"def","parentIds":["p1"],"authorName":"Alice","authorEmail":"alice@example.com","authorTime":"2025-01-02T03:04:05+00:00","description":"hi","bookmarks":["main"],"untrackedRemoteBookmarks":["feature@origin"],"trackedRemoteBookmarks":["main@origin"]}
+            """.trimIndent(),
+            "jj log",
+        )
+
+        assertEquals(1, commits.size)
+        assertEquals(listOf("feature@origin"), commits[0].untrackedRemoteBookmarks)
+        assertEquals(listOf("main@origin"), commits[0].trackedRemoteBookmarks)
     }
 }

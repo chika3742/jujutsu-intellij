@@ -9,7 +9,15 @@ import java.util.concurrent.ConcurrentHashMap
 @Service(Service.Level.PROJECT)
 class JjCommitCache {
 
-    data class Info(val description: String, val isRoot: Boolean, val bookmarks: List<String>)
+    data class Info(
+        val description: String,
+        val isRoot: Boolean,
+        val bookmarks: List<String>,
+        /** Untracked remote bookmarks on this commit, each as `name@remote`. */
+        val untrackedRemoteBookmarks: List<String>,
+        /** Tracked remote bookmarks on this commit, each as `name@remote`. */
+        val trackedRemoteBookmarks: List<String>,
+    )
 
     private val infos = ConcurrentHashMap<String, Info>()
 
@@ -20,7 +28,13 @@ class JjCommitCache {
     }
 
     fun record(commit: JjCommit) {
-        infos[commit.commitId] = Info(commit.description, commit.isRoot, commit.bookmarks)
+        infos[commit.commitId] = Info(
+            commit.description,
+            commit.isRoot,
+            commit.bookmarks,
+            commit.untrackedRemoteBookmarks,
+            commit.trackedRemoteBookmarks,
+        )
     }
 
     fun get(hash: String): Info? =

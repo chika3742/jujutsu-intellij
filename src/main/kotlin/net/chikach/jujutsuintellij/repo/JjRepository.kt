@@ -144,9 +144,19 @@ class JjRepository(
 
     /**
      * Returns all bookmark / tag refs as one [JjCommitRef] per (name, remote?) pair.
+     * Set [allRemotes] to also include untracked remote bookmarks (`jj bookmark list --all-remotes`).
      */
-    fun listBookmarks(revset: String? = null, sortByCommitterDate: Boolean = false): List<JjCommitRef> =
-        commands().bookmarkList(this, revset, sortKeys = if (sortByCommitterDate) "committer-date-" else null)
+    fun listBookmarks(
+        revset: String? = null,
+        sortByCommitterDate: Boolean = false,
+        allRemotes: Boolean = false,
+    ): List<JjCommitRef> =
+        commands().bookmarkList(
+            this,
+            revset,
+            sortKeys = if (sortByCommitterDate) "committer-date-" else null,
+            allRemotes = allRemotes,
+        )
 
     fun listBookmarksByCommitId(commitId: String): List<JjCommitRef> =
         listBookmarks("descendants(${commitId})")
@@ -244,6 +254,12 @@ class JjRepository(
 
         private const val WORKING_COPY_REF = "@"
         private const val ANCESTORS_OF_WORKING_COPY_REF = "::@"
+
+        /**
+         * The internal git-backed pseudo-remote of a co-located repository. It is always tracked and
+         * not a user-facing remote, so track / untrack UI excludes it.
+         */
+        const val INTERNAL_GIT_REMOTE = "git"
     }
 }
 

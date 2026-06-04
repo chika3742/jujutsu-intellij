@@ -119,12 +119,18 @@ class JjCommands {
             request(repo.rootPathNio, listOf("log", "--no-graph", "-r", revset, "-T", JjCommit.TEMPLATE))
         )
 
-    fun bookmarkList(repo: JjRepository, revset: String? = null, sortKeys: String? = null): List<JjCommitRef> {
+    fun bookmarkList(
+        repo: JjRepository,
+        revset: String? = null,
+        sortKeys: String? = null,
+        allRemotes: Boolean = false,
+    ): List<JjCommitRef> {
         val args = buildList {
             add("bookmark")
             add("list")
             if (revset != null) { add("-r"); add(revset) }
             if (sortKeys != null) { add("--sort"); add(sortKeys) }
+            if (allRemotes) add("--all-remotes")
             add("-T"); add(JjCommitRef.TEMPLATE)
         }
         return JjJsonCommand.getInstance().executeJsonList(request(repo.rootPathNio, args))

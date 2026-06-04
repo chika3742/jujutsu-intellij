@@ -17,6 +17,8 @@ data class JjCommit(
     val bookmarks: List<String>,
     val isRoot: Boolean = false,
     val conflictedFiles: List<String> = emptyList(),
+    val untrackedRemoteBookmarks: List<String> = emptyList(),
+    val trackedRemoteBookmarks: List<String> = emptyList(),
 ) {
     val isConflicted: Boolean get() = conflictedFiles.isNotEmpty()
 
@@ -34,6 +36,8 @@ data class JjCommit(
                     "bookmarks" to serialized(bookmarks())
                     "isRoot" to bool(root())
                     "conflictedFiles" to serialized(conflictedFilePaths())
+                    "untrackedRemoteBookmarks" to serialized(untrackedRemoteBookmarkLabels())
+                    "trackedRemoteBookmarks" to serialized(trackedRemoteBookmarkLabels())
                 }
             }
         }

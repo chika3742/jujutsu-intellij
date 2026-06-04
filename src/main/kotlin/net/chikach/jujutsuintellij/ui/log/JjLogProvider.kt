@@ -162,12 +162,26 @@ class JjLogProvider(private val project: Project) : VcsLogProvider {
         )
     }
 
+    /**
+     * Local bookmarks render as [JjBookmarkRefType] labeled `name`; untracked non-`git` remote
+     * bookmarks render as [JjRemoteBookmarkRefType] labeled `name@remote`. Tracked remotes and the
+     * internal `git` pseudo-remote are skipped, since a tracked remote shares its local's target.
+     */
     private fun loadBookmarkRefs(root: VirtualFile, factory: VcsLogObjectsFactory): List<VcsRef> {
         val repo = JjRepositoryManager.getInstance(project).getRepositoryForRoot(root)
-        return repo.listBookmarks(revset = "bookmarks()")
+        // No revset: `jj bookmark list -r <revset>` filters by *local* target, which would drop
+        // remote-only bookmarks. `--all-remotes` alone lists every local and remote bookmark; refs
+        // on commits outside the loaded log block are simply not rendered.
+        return repo.listBookmarks(allRemotes = true)
             .mapNotNull { ref ->
                 val commitId = ref.commitId ?: return@mapNotNull null
-                factory.createRef(factory.createHash(commitId), ref.name, JjBookmarkRefType, root)
+                val hash = factory.createHash(commitId)
+                when {
+                    ref.isLocal -> factory.createRef(hash, ref.name, JjBookmarkRefType, root)
+                    !ref.tracked && ref.remote != JjRepository.INTERNAL_GIT_REMOTE ->
+                        factory.createRef(hash, "${ref.name}@${ref.remote}", JjRemoteBookmarkRefType, root)
+                    else -> null
+                }
             }
     }
 }

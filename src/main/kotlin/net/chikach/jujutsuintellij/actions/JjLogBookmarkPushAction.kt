@@ -24,6 +24,7 @@ class JjLogBookmarkPushAction : JjLogCommitAction() {
             JujutsuBundle.message("dialog.bookmark.push.error"),
         ) {
             target.repo.gitPush(bookmarks = bookmarks)
+            notifyJjInfo(project, JujutsuBundle.message("notification.bookmark.push.success", bookmarks.joinToString(", ")))
         }
     }
 

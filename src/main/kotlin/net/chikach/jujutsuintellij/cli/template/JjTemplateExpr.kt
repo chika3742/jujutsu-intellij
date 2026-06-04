@@ -169,6 +169,21 @@ fun <ElementT : JjTemplateExpr, OutT : JjTemplateExpr> lambda(
 fun <InT: JjTemplateExpr, OutT: JjTemplateExpr> ListExpr<InT>.map(lambda: LambdaExpr<InT, OutT>): ListExpr<OutT> =
     RenderedListExpr(methodCall(this, "map", lambda))
 
+fun <T: JjTemplateExpr> ListExpr<T>.filter(lambda: LambdaExpr<T, BooleanExpr>): ListExpr<T> =
+    RenderedListExpr(methodCall(this, "filter", lambda))
+
+/** Logical negation: `!x`. */
+fun BooleanExpr.not(): BooleanExpr = RenderedBooleanExpr("!${render()}")
+
+/** Logical conjunction: `x && y`. */
+fun BooleanExpr.and(other: BooleanExpr): BooleanExpr = RenderedBooleanExpr("${render()} && ${other.render()}")
+
+/** Inequality comparison: `x != y`. */
+fun StringExpr.notEquals(other: StringExpr): BooleanExpr = RenderedBooleanExpr("${render()} != ${other.render()}")
+
+/** jj template concatenation: `x ++ y`. */
+fun StringExpr.concat(other: StringExpr): StringExpr = RenderedStringExpr("${render()} ++ ${other.render()}")
+
 fun CommitExpr.commitId(): SerializableTemplateExpr = serializableTemplateExpr(methodCall(this, "commit_id"))
 
 fun CommitExpr.changeId(): SerializableTemplateExpr = serializableTemplateExpr(methodCall(this, "change_id"))
@@ -215,6 +230,37 @@ fun AnnotationLineExpr.commit(): CommitExpr = RenderedCommitExpr(methodCall(this
 fun CommitRefExpr.name(): StringExpr = RenderedStringExpr(methodCall(this, "name"))
 
 fun CommitRefExpr.remote(): StringExpr = RenderedStringExpr(methodCall(this, "remote"))
+
+/** True when this remote ref is tracked by a local ref of the same name. */
+fun CommitRefExpr.tracked(): BooleanExpr = RenderedBooleanExpr(methodCall(this, "tracked"))
+
+fun CommitExpr.remoteBookmarks(): ListExpr<CommitRefExpr> =
+    RenderedListExpr(methodCall(this, "remote_bookmarks"))
+
+/** `name@remote` strings for the commit's untracked remote bookmarks (excluding the `git` pseudo-remote). */
+fun CommitExpr.untrackedRemoteBookmarkLabels(): ListExpr<SerializableTemplateExpr> =
+    remoteBookmarkLabels(tracked = false)
+
+/** `name@remote` strings for the commit's tracked remote bookmarks (excluding the `git` pseudo-remote). */
+fun CommitExpr.trackedRemoteBookmarkLabels(): ListExpr<SerializableTemplateExpr> =
+    remoteBookmarkLabels(tracked = true)
+
+/**
+ * `self.remote_bookmarks().filter(|p| <tracked> && p.remote() != "git").map(|p| stringify(p.name() ++ "@" ++ p.remote()))`
+ * — yields a list of `name@remote` strings for the commit's remote bookmarks whose tracking state
+ * matches [tracked], excluding the internal `git` pseudo-remote. Each element is wrapped in
+ * `stringify` so it is a serializable string (the `++` concatenation alone is a non-serializable
+ * template). Pair with `serialized(...)` to render a JSON string array.
+ */
+private fun CommitExpr.remoteBookmarkLabels(tracked: Boolean): ListExpr<SerializableTemplateExpr> =
+    remoteBookmarks()
+        .filter(lambda(::commitRefExpr) { ref ->
+            val trackedPredicate = if (tracked) ref.tracked() else ref.tracked().not()
+            trackedPredicate.and(ref.remote().notEquals(literal("git")))
+        })
+        .map(lambda(::commitRefExpr) { ref ->
+            stringify(ref.name().concat(literal("@")).concat(ref.remote()))
+        })
 
 /**
  * Renders the commit id of `normal_target()` as a JSON value: a quoted commit id when present,

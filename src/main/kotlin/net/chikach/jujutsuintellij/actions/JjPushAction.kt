@@ -6,6 +6,7 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.ui.Messages
+import net.chikach.jujutsuintellij.JujutsuBundle
 import net.chikach.jujutsuintellij.repo.JjChangeWatcher
 import net.chikach.jujutsuintellij.repo.JjOperationException
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
@@ -35,6 +36,7 @@ class JjPushAction : AnAction() {
                     throw RuntimeException(errors.joinToString("\n"))
                 }
                 JjChangeWatcher.getInstance(project).forceRefresh()
+                notifyJjInfo(project, JujutsuBundle.message("notification.push"))
             }
 
             override fun onThrowable(error: Throwable) {

@@ -23,13 +23,11 @@ class JjLogRefManager : VcsLogRefManager {
         refs.map { singleGroup(it) }
 
     override fun serialize(out: DataOutput, type: VcsRefType) {
-        out.writeByte(0)
+        out.writeByte(if (type == JjRemoteBookmarkRefType) 1 else 0)
     }
 
-    override fun deserialize(input: DataInput): VcsRefType {
-        input.readByte()
-        return JjBookmarkRefType
-    }
+    override fun deserialize(input: DataInput): VcsRefType =
+        if (input.readByte().toInt() == 1) JjRemoteBookmarkRefType else JjBookmarkRefType
 
     override fun isFavorite(ref: VcsRef): Boolean = false
 
