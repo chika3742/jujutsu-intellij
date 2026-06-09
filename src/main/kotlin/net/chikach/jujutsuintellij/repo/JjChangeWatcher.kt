@@ -34,8 +34,11 @@ import java.util.concurrent.TimeUnit
  * Plugin-initiated operations additionally call [forceRefresh] for an immediate update rather than
  * waiting for the (slightly delayed) native-watcher event.
  *
- * Refreshing the log always reloads it fully: jj rewrites commit ids (`new`/rebase/squash), which the
- * platform's incremental commit joiner can't handle, so it falls back to a full reload automatically.
+ * Refreshing the log runs the platform's incremental join, which drops commits by diffing the
+ * registered refs (previousRefs − newRefs). jj rewrites commit ids (`new`/rebase/squash/abandon), so
+ * [net.chikach.jujutsuintellij.ui.log.JjLogProvider] registers every visible head (`heads(all())`,
+ * including `@`) as a ref — analogous to git's HEAD — so the joiner can remove the rewritten/abandoned
+ * nodes. Cases the joiner cannot reconcile fall back to a full reload automatically.
  */
 @Service(Service.Level.PROJECT)
 class JjChangeWatcher(private val project: Project) : Disposable {

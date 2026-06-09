@@ -11,9 +11,9 @@ import com.intellij.util.Consumer
 import com.intellij.vcs.log.*
 import net.chikach.jujutsuintellij.JujutsuBundle
 import net.chikach.jujutsuintellij.caches.JjCommitCache
+import net.chikach.jujutsuintellij.caches.JjWorkingCopyCache
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
-import net.chikach.jujutsuintellij.caches.JjWorkingCopyCache
 import net.chikach.jujutsuintellij.repo.model.JjCommit
 import net.chikach.jujutsuintellij.repo.model.JjFileChange
 import net.chikach.jujutsuintellij.vcs.JjConflictTracker
@@ -30,7 +30,7 @@ class JjLogProvider(private val project: Project) : VcsLogProvider {
 
         val entries = repo.recentLog(requirements.commitCount)
         JjConflictTracker.getInstance(project).record(entries)
-        val refs = loadBookmarkRefs(root, factory)
+        val refs = loadBookmarkRefs(root, factory) + loadVisibleHeadRefs(root, factory)
         JjCommitCache.getInstance(project).record(entries)
         val commitsList = entries.map { entry -> entry.toCommitMetadata(root, factory) }
 
@@ -57,7 +57,7 @@ class JjLogProvider(private val project: Project) : VcsLogProvider {
             )
         }
 
-        val refs = loadBookmarkRefs(root, factory)
+        val refs = loadBookmarkRefs(root, factory) + loadVisibleHeadRefs(root, factory)
         return object : VcsLogProvider.LogData {
             override fun getRefs(): Set<VcsRef> = refs.toSet()
             override fun getUsers(): Set<VcsUser> = users
@@ -183,5 +183,18 @@ class JjLogProvider(private val project: Project) : VcsLogProvider {
                     else -> null
                 }
             }
+    }
+
+    /**
+     * Visible heads (`heads(all())`), including the working copy `@`, as [JjVisibleHeadRefType] refs.
+     * These exist only so the platform's VcsLogJoiner can drop rewritten/abandoned commits from the
+     * ref diff during an incremental refresh (jj rewrites commit ids); [JjLogRefManager] filters them
+     * out of label rendering. Commit ids are read fresh from jj, not from a possibly-stale cache.
+     */
+    private fun loadVisibleHeadRefs(root: VirtualFile, factory: VcsLogObjectsFactory): List<VcsRef> {
+        val repo = JjRepositoryManager.getInstance(project).getRepositoryForRoot(root)
+        return repo.logByRevset("heads(all())").map { commit ->
+            factory.createRef(factory.createHash(commit.commitId), commit.changeId, JjVisibleHeadRefType, root)
+        }
     }
 }

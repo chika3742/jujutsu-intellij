@@ -7,11 +7,11 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Ref
 import com.intellij.openapi.vcs.FilePath
 import com.intellij.openapi.vcs.VcsException
-import com.intellij.openapi.vcs.changes.VcsDirtyScopeManager
 import com.intellij.openapi.vcs.update.SequentialUpdatesContext
 import com.intellij.openapi.vcs.update.UpdateEnvironment
 import com.intellij.openapi.vcs.update.UpdateSession
 import com.intellij.openapi.vcs.update.UpdatedFiles
+import net.chikach.jujutsuintellij.repo.JjChangeWatcher
 import net.chikach.jujutsuintellij.repo.JjOperationException
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
 
@@ -47,7 +47,7 @@ class JjUpdateEnvironment(private val project: Project) : UpdateEnvironment {
             }
         }
 
-        VcsDirtyScopeManager.getInstance(project).markEverythingDirty()
+        JjChangeWatcher.getInstance(project).forceRefresh()
 
         return object : UpdateSession {
             override fun getExceptions(): List<VcsException> = exceptions

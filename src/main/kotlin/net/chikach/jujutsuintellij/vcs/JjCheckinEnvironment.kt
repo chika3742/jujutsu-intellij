@@ -6,13 +6,12 @@ import com.intellij.openapi.vcs.FilePath
 import com.intellij.openapi.vcs.VcsException
 import com.intellij.openapi.vcs.changes.Change
 import com.intellij.openapi.vcs.changes.CommitContext
-import com.intellij.openapi.vcs.changes.VcsDirtyScopeManager
 import com.intellij.openapi.vcs.checkin.CheckinEnvironment
 import com.intellij.openapi.vfs.VirtualFile
+import net.chikach.jujutsuintellij.repo.JjChangeWatcher
 import net.chikach.jujutsuintellij.repo.JjOperationException
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
-import net.chikach.jujutsuintellij.caches.JjWorkingCopyCache
 
 /**
  * Maps IntelliJ's "Commit" action onto `jj commit -m <message>`.
@@ -58,8 +57,7 @@ class JjCheckinEnvironment(private val project: Project) : CheckinEnvironment {
             }
         }
 
-        JjWorkingCopyCache.getInstance(project).refresh()
-        VcsDirtyScopeManager.getInstance(project).markEverythingDirty()
+        JjChangeWatcher.getInstance(project).forceRefresh()
         return errors.ifEmpty { null }
     }
 

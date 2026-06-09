@@ -5,11 +5,11 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.vcs.FilePath
 import com.intellij.openapi.vcs.VcsException
 import com.intellij.openapi.vcs.changes.Change
-import com.intellij.openapi.vcs.changes.VcsDirtyScopeManager
 import com.intellij.openapi.vcs.rollback.RollbackEnvironment
 import com.intellij.openapi.vcs.rollback.RollbackProgressListener
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
+import net.chikach.jujutsuintellij.repo.JjChangeWatcher
 import net.chikach.jujutsuintellij.repo.JjOperationException
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
@@ -59,7 +59,7 @@ class JjRollbackEnvironment(private val project: Project) : RollbackEnvironment 
         }
 
         LocalFileSystem.getInstance().refreshFiles(filesToRefresh, true, false, null)
-        VcsDirtyScopeManager.getInstance(project).markEverythingDirty()
+        JjChangeWatcher.getInstance(project).forceRefresh()
     }
 
     override fun rollbackMissingFileDeletion(

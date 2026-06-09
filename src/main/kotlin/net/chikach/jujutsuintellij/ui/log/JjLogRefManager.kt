@@ -17,17 +17,27 @@ class JjLogRefManager : VcsLogRefManager {
         Comparator.comparing { it.name }
 
     override fun groupForBranchFilter(refs: Collection<VcsRef>): List<RefGroup> =
-        refs.map { singleGroup(it) }
+        refs.filter { it.type != JjVisibleHeadRefType }.map { singleGroup(it) }
 
     override fun groupForTable(refs: Collection<VcsRef>, compact: Boolean, showTagNames: Boolean): List<RefGroup> =
-        refs.map { singleGroup(it) }
+        refs.filter { it.type != JjVisibleHeadRefType }.map { singleGroup(it) }
 
     override fun serialize(out: DataOutput, type: VcsRefType) {
-        out.writeByte(if (type == JjRemoteBookmarkRefType) 1 else 0)
+        out.writeByte(
+            when (type) {
+                JjRemoteBookmarkRefType -> 1
+                JjVisibleHeadRefType -> 2
+                else -> 0
+            }
+        )
     }
 
     override fun deserialize(input: DataInput): VcsRefType =
-        if (input.readByte().toInt() == 1) JjRemoteBookmarkRefType else JjBookmarkRefType
+        when (input.readByte().toInt()) {
+            1 -> JjRemoteBookmarkRefType
+            2 -> JjVisibleHeadRefType
+            else -> JjBookmarkRefType
+        }
 
     override fun isFavorite(ref: VcsRef): Boolean = false
 
