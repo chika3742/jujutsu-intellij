@@ -38,6 +38,20 @@ class JjTemplatesTest {
     }
 
     @Test
+    fun `renders local tag names`() {
+        val template = JjTemplates.commitJsonLine {
+            obj {
+                "tags" to serialized(localTags())
+            }
+        }
+
+        assertEquals(
+            "\"{\" ++ \"\\\"tags\\\":\" ++ json(self.local_tags().map(|p| p.name())) ++ \"}\" ++ \"\\n\"",
+            template
+        )
+    }
+
+    @Test
     fun `renders untracked remote bookmark labels`() {
         val template = JjTemplates.commitJsonLine {
             obj {

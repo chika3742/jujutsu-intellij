@@ -72,6 +72,21 @@ class JjJsonParsingTest {
     }
 
     @Test
+    fun `parses commit tags and defaults to empty when absent`() {
+        val commits = JjJsonParser.parseList<JjCommit>(
+            """
+            {"commitId":"abc","changeId":"def","parentIds":[],"authorName":"Alice","authorEmail":"alice@example.com","authorTime":"2025-01-02T03:04:05+00:00","description":"hi","bookmarks":[],"tags":["v1.0","v1.1"]}
+            {"commitId":"ghi","changeId":"jkl","parentIds":[],"authorName":"Alice","authorEmail":"alice@example.com","authorTime":"2025-01-02T03:04:05+00:00","description":"hi","bookmarks":[]}
+            """.trimIndent(),
+            "jj log",
+        )
+
+        assertEquals(2, commits.size)
+        assertEquals(listOf("v1.0", "v1.1"), commits[0].tags)
+        assertEquals(emptyList(), commits[1].tags)
+    }
+
+    @Test
     fun `parses commit with tracked and untracked remote bookmarks`() {
         val commits = JjJsonParser.parseList<JjCommit>(
             """

@@ -30,7 +30,7 @@ class JjLogProvider(private val project: Project) : VcsLogProvider {
 
         val entries = repo.recentLog(requirements.commitCount)
         JjConflictTracker.getInstance(project).record(entries)
-        val refs = loadBookmarkRefs(root, factory) + loadVisibleHeadRefs(root, factory)
+        val refs = loadBookmarkRefs(root, factory) + loadTagRefs(root, factory) + loadVisibleHeadRefs(root, factory)
         JjCommitCache.getInstance(project).record(entries)
         val commitsList = entries.map { entry -> entry.toCommitMetadata(root, factory) }
 
@@ -57,7 +57,7 @@ class JjLogProvider(private val project: Project) : VcsLogProvider {
             )
         }
 
-        val refs = loadBookmarkRefs(root, factory) + loadVisibleHeadRefs(root, factory)
+        val refs = loadBookmarkRefs(root, factory) + loadTagRefs(root, factory) + loadVisibleHeadRefs(root, factory)
         return object : VcsLogProvider.LogData {
             override fun getRefs(): Set<VcsRef> = refs.toSet()
             override fun getUsers(): Set<VcsUser> = users
@@ -183,6 +183,18 @@ class JjLogProvider(private val project: Project) : VcsLogProvider {
                     else -> null
                 }
             }
+    }
+
+    /** Local tags render as [JjTagRefType] labeled `name`; conflicted tags (no target) are skipped. */
+    private fun loadTagRefs(root: VirtualFile, factory: VcsLogObjectsFactory): List<VcsRef> {
+        val repo = JjRepositoryManager.getInstance(project).getRepositoryForRoot(root)
+        // Without --all-remotes the listing is local tags plus out-of-sync remote tags; only the
+        // local ones become labels.
+        return repo.listTags().mapNotNull { ref ->
+            if (!ref.isLocal) return@mapNotNull null
+            val commitId = ref.commitId ?: return@mapNotNull null
+            factory.createRef(factory.createHash(commitId), ref.name, JjTagRefType, root)
+        }
     }
 
     /**

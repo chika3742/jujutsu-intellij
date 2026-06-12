@@ -27,6 +27,7 @@ class JjLogRefManager : VcsLogRefManager {
             when (type) {
                 JjRemoteBookmarkRefType -> 1
                 JjVisibleHeadRefType -> 2
+                JjTagRefType -> 3
                 else -> 0
             }
         )
@@ -36,6 +37,7 @@ class JjLogRefManager : VcsLogRefManager {
         when (input.readByte().toInt()) {
             1 -> JjRemoteBookmarkRefType
             2 -> JjVisibleHeadRefType
+            3 -> JjTagRefType
             else -> JjBookmarkRefType
         }
 

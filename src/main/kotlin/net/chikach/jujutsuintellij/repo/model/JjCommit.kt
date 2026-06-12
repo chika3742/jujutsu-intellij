@@ -15,6 +15,7 @@ data class JjCommit(
     @Serializable(with = JjDateSerializer::class) val authorTime: Date,
     val description: String,
     val bookmarks: List<String>,
+    val tags: List<String> = emptyList(),
     val isRoot: Boolean = false,
     val conflictedFiles: List<String> = emptyList(),
     val untrackedRemoteBookmarks: List<String> = emptyList(),
@@ -34,6 +35,7 @@ data class JjCommit(
                     "authorTime" to string(author().timestamp().iso8601())
                     "description" to string(description())
                     "bookmarks" to serialized(bookmarks())
+                    "tags" to serialized(localTags())
                     "isRoot" to bool(root())
                     "conflictedFiles" to serialized(conflictedFilePaths())
                     "untrackedRemoteBookmarks" to serialized(untrackedRemoteBookmarkLabels())

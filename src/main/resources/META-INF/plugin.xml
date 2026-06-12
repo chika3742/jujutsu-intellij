@@ -77,6 +77,10 @@
                 class="net.chikach.jujutsuintellij.actions.JjLogBookmarkUntrackAction"/>
         <action id="Jujutsu.Log.BookmarkDelete"
                 class="net.chikach.jujutsuintellij.actions.JjLogBookmarkDeleteAction"/>
+        <action id="Jujutsu.Log.TagCreate"
+                class="net.chikach.jujutsuintellij.actions.JjLogTagCreateAction"/>
+        <group id="Jujutsu.Log.TagDelete"
+               class="net.chikach.jujutsuintellij.actions.JjLogTagDeleteActionGroup"/>
         <action id="Jujutsu.Log.Describe"
                 class="net.chikach.jujutsuintellij.actions.JjLogDescribeAction"/>
         <action id="Jujutsu.Log.Abandon"
@@ -156,6 +160,9 @@
             <reference ref="Jujutsu.Log.BookmarkUntrack"/>
             <reference ref="Jujutsu.Log.BookmarkForget"/>
             <reference ref="Jujutsu.Log.BookmarkDelete"/>
+            <separator/>
+            <reference ref="Jujutsu.Log.TagCreate"/>
+            <reference ref="Jujutsu.Log.TagDelete"/>
             <add-to-group group-id="Vcs.Log.ContextMenu" anchor="last"/>
         </group>
     </actions>

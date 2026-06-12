@@ -13,6 +13,8 @@ class JjCommitCache {
         val description: String,
         val isRoot: Boolean,
         val bookmarks: List<String>,
+        /** Local tags on this commit. */
+        val tags: List<String>,
         /** Untracked remote bookmarks on this commit, each as `name@remote`. */
         val untrackedRemoteBookmarks: List<String>,
         /** Tracked remote bookmarks on this commit, each as `name@remote`. */
@@ -32,6 +34,7 @@ class JjCommitCache {
             commit.description,
             commit.isRoot,
             commit.bookmarks,
+            commit.tags,
             commit.untrackedRemoteBookmarks,
             commit.trackedRemoteBookmarks,
         )

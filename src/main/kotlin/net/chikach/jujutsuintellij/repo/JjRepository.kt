@@ -2,6 +2,7 @@ package net.chikach.jujutsuintellij.repo
 
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import net.chikach.jujutsuintellij.cli.GitRemoteTagOperations
 import net.chikach.jujutsuintellij.cli.JjCommandResult
 import net.chikach.jujutsuintellij.cli.JjCommands
 import net.chikach.jujutsuintellij.repo.model.*
@@ -202,6 +203,36 @@ class JjRepository(
         commands().bookmarkUntrack(this, name, remote).orThrow("bookmark untrack")
     }
 
+    // ─── Tags ───────────────────────────────────────────────────────────────
+
+    /**
+     * Returns all tag refs as one [JjCommitRef] per (name, remote?) pair. Set [allRemotes] to also
+     * include remote tags whose targets are synchronized with the local tags
+     * (`jj tag list --all-remotes`).
+     */
+    fun listTags(allRemotes: Boolean = false): List<JjCommitRef> =
+        commands().tagList(this, allRemotes = allRemotes)
+
+    /**
+     * Creates or retargets [name] to [revision] (`jj tag set`). Set [allowMove] to permit moving an
+     * existing tag (jj refuses this by default).
+     */
+    fun setTag(name: String, revision: String = WORKING_COPY_REF, allowMove: Boolean = false) {
+        commands().tagSet(this, name, revision, allowMove).orThrow("tag set")
+    }
+
+    fun deleteTag(name: String) {
+        commands().tagDelete(this, name).orThrow("tag delete")
+    }
+
+    /**
+     * Deletes tag [name] on [remote]. jj has no remote tag deletion, so this shells out to `git`
+     * against the backing git repository (see [GitRemoteTagOperations]).
+     */
+    fun deleteRemoteTag(name: String, remote: String) {
+        GitRemoteTagOperations.deleteRemoteTag(rootPathNio, remote, name)
+    }
+
     // ─── Config ─────────────────────────────────────────────────────────────
 
     /** Returns the config value at [key], or `null` if unset / not retrievable. */
@@ -218,6 +249,15 @@ class JjRepository(
     }
 
     // ─── Git coexistence ────────────────────────────────────────────────────
+
+    /** Names of the configured git remotes (`jj git remote list`), one `name url` line per remote. */
+    fun listGitRemotes(): List<String> {
+        val result = commands().gitRemoteList(this)
+        if (!result.isSuccess) throw JjOperationException.from("git remote list", result)
+        return result.stdout.lineSequence()
+            .mapNotNull { line -> line.trim().substringBefore(' ').ifEmpty { null } }
+            .toList()
+    }
 
     fun gitFetch(remote: String? = null) {
         commands().gitFetch(this, remote).orThrow("git fetch")

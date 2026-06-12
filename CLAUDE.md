@@ -145,6 +145,12 @@ Refresh is driven by `repo/JjChangeWatcher` (+ `JjChangeWatcherStartup`, a `post
 - Centralize repo-relative path logic in `JjRepository` / `JjPathUtil`.
 - Prefer `repo.relativize(...)`, `repo.normalizeRelativePath(...)`, and `repo.resolveRelativePath(...)` over duplicating string slicing in providers.
 
+### Co-located repositories and the backing git repo
+
+- jj's only practical backend is the git backend, so **every jj repo has a backing git repository**, even when not co-located. In a non-colocated repo it is a bare repo at `.jj/repo/store/git`; "co-located" only means the git repo lives at the workspace root as `.git` and jj auto-imports/exports on every command.
+- If `.jj/repo/store/git_target` exists, its content is the path to the actual git directory (relative paths are resolved against the store directory).
+- Remotes are configured in the backing git repo's config, so `git --git-dir=<resolved dir>` can run git commands directly in both layouts. This is used for operations jj does not support (e.g. deleting a tag on a remote — see `GitRemoteTagOperations`).
+
 ### Extension model
 
 New IDE integrations (actions, services, file types, VCS handlers, etc.) are declared in `plugin.xml` under `<extensions defaultExtensionNs="com.intellij">` and implemented as Kotlin classes. The plugin depends on `com.intellij.modules.platform` and `com.intellij.modules.vcs`; add bundled plugin dependencies in `build.gradle.kts` under `intellijPlatform { bundledPlugin(...) }`.

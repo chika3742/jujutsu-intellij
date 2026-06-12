@@ -199,6 +199,10 @@ fun CommitExpr.root(): BooleanExpr = RenderedBooleanExpr(methodCall(this, "root"
 fun CommitExpr.bookmarks(): ListExpr<SerializableTemplateExpr> = RenderedListExpr<SerializableTemplateExpr>(methodCall(this, "bookmarks"))
     .map(lambda(::commitRefExpr) { it.name() })
 
+/** Names of all local tags pointing to the commit (`self.local_tags()`). */
+fun CommitExpr.localTags(): ListExpr<SerializableTemplateExpr> = RenderedListExpr<SerializableTemplateExpr>(methodCall(this, "local_tags"))
+    .map(lambda(::commitRefExpr) { it.name() })
+
 fun TreeEntryExpr.path(): SerializableTemplateExpr =
     serializableTemplateExpr(methodCall(this, "path"))
 

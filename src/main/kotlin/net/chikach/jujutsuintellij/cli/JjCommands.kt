@@ -172,6 +172,41 @@ class JjCommands {
     fun bookmarkUntrack(repo: JjRepository, name: String, remote: String): JjCommandResult =
         execute(request(repo.rootPathNio, listOf("bookmark", "untrack", "$name@$remote")))
 
+    fun tagList(
+        repo: JjRepository,
+        revset: String? = null,
+        allRemotes: Boolean = false,
+    ): List<JjCommitRef> {
+        val args = buildList {
+            add("tag")
+            add("list")
+            if (revset != null) { add("-r"); add(revset) }
+            if (allRemotes) add("--all-remotes")
+            add("-T"); add(JjCommitRef.TEMPLATE)
+        }
+        return JjJsonCommand.getInstance().executeJsonList(request(repo.rootPathNio, args))
+    }
+
+    /**
+     * Creates or updates [name] to point at [revision] (`jj tag set`). [allowMove] adds
+     * `--allow-move`, which jj requires to retarget an existing tag.
+     */
+    fun tagSet(repo: JjRepository, name: String, revision: String, allowMove: Boolean = false): JjCommandResult {
+        val args = buildList {
+            add("tag"); add("set")
+            add("--revision"); add(revision)
+            if (allowMove) add("--allow-move")
+            add(name)
+        }
+        return execute(request(repo.rootPathNio, args))
+    }
+
+    fun tagDelete(repo: JjRepository, name: String): JjCommandResult =
+        execute(request(repo.rootPathNio, listOf("tag", "delete", name)))
+
+    fun gitRemoteList(repo: JjRepository): JjCommandResult =
+        execute(request(repo.rootPathNio, listOf("git", "remote", "list")))
+
     fun gitFetch(repo: JjRepository, remote: String? = null): JjCommandResult {
         val args = buildList {
             add("git")
