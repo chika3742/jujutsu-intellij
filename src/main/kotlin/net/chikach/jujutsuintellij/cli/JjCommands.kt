@@ -216,12 +216,18 @@ class JjCommands {
         return execute(request(repo.rootPathNio, args))
     }
 
-    fun gitPush(repo: JjRepository, bookmarks: List<String> = emptyList(), remote: String? = null): JjCommandResult {
+    fun gitPush(
+        repo: JjRepository,
+        bookmarks: List<String> = emptyList(),
+        remote: String? = null,
+        allowNew: Boolean = false,
+    ): JjCommandResult {
         val args = buildList {
             add("git")
             add("push")
             for (bookmark in bookmarks) { add("--bookmark"); add(bookmark) }
             if (remote != null) { add("--remote"); add(remote) }
+            if (allowNew) add("--allow-new")
         }
         return execute(request(repo.rootPathNio, args))
     }

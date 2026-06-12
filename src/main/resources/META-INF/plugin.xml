@@ -69,8 +69,8 @@
                 class="net.chikach.jujutsuintellij.actions.JjLogBookmarkRenameAction"/>
         <action id="Jujutsu.Log.BookmarkForget"
                 class="net.chikach.jujutsuintellij.actions.JjLogBookmarkForgetAction"/>
-        <action id="Jujutsu.Log.BookmarkPush"
-                class="net.chikach.jujutsuintellij.actions.JjLogBookmarkPushAction"/>
+        <group id="Jujutsu.Log.BookmarkPush"
+               class="net.chikach.jujutsuintellij.actions.JjLogBookmarkPushActionGroup"/>
         <action id="Jujutsu.Log.BookmarkTrack"
                 class="net.chikach.jujutsuintellij.actions.JjLogBookmarkTrackAction"/>
         <action id="Jujutsu.Log.BookmarkUntrack"

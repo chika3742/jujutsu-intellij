@@ -263,8 +263,16 @@ class JjRepository(
         commands().gitFetch(this, remote).orThrow("git fetch")
     }
 
-    fun gitPush(bookmarks: List<String> = emptyList(), remote: String? = null) {
-        commands().gitPush(this, bookmarks, remote).orThrow("git push")
+    fun gitPush(bookmarks: List<String> = emptyList(), remote: String? = null, allowNew: Boolean = false) {
+        commands().gitPush(this, bookmarks, remote, allowNew).orThrow("git push")
+    }
+
+    /**
+     * Pushes the local tags [tags] to [remote]. jj cannot push tags, so this shells out to `git`
+     * against the backing git repository (see [GitRemoteTagOperations]). Run after a `jj git push`.
+     */
+    fun gitPushTags(remote: String, tags: List<String>) {
+        GitRemoteTagOperations.pushRemoteTags(rootPathNio, remote, tags)
     }
 
     /** `jj rebase` revision-selection mode: `-r` moves only the revisions, `-s` adds descendants. */

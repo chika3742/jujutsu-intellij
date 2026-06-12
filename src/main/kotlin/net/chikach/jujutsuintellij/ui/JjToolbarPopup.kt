@@ -19,20 +19,21 @@ import net.chikach.jujutsuintellij.repo.JjOperationException
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
 import net.chikach.jujutsuintellij.repo.model.JjCommitRef
+import net.chikach.jujutsuintellij.ui.push.launchJjPushDialog
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 
 private const val ALLOW_BACKWARDS_HINT = "--allow-backwards"
 
 /**
- * Builds the action group for the toolbar revision-widget popup: a Fetch row, a "Push nearest
- * bookmark" row (plain `jj git push`, whose default pushes the nearest tracked bookmark), one
- * submenu per local bookmark (Move to working copy / Push / Rename / Track or Untrack per remote /
- * Remove locally / Delete), and a "Remote bookmarks" section listing untracked remote bookmarks
- * that have no local counterpart, each offering Track.
+ * Builds the action group for the toolbar revision-widget popup: a Fetch row, a "Push" row (opens
+ * the [net.chikach.jujutsuintellij.ui.push.JjPushDialog] preview), one submenu per local bookmark
+ * (Move to working copy / Push / Rename / Track or Untrack per remote / Remove locally / Delete),
+ * and a "Remote bookmarks" section listing untracked remote bookmarks that have no local
+ * counterpart, each offering Track.
  */
 fun buildJjToolbarPopupGroup(project: Project): DefaultActionGroup = DefaultActionGroup().apply {
     add(ActionManager.getInstance().getAction("Jujutsu.Fetch"))
-    add(PushNearestAction())
+    add(PushAction())
     addSeparator(JujutsuBundle.message("popup.bookmarks.separator"))
 
     val remoteOnly = mutableListOf<Pair<JjRepository, JjCommitRef>>()
@@ -85,14 +86,11 @@ private abstract class PopupAction(text: String) : AnAction(text) {
     override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.BGT
 }
 
-private class PushNearestAction :
-    PopupAction(JujutsuBundle.message("action.Jujutsu.Popup.PushNearest.text")) {
+private class PushAction :
+    PopupAction(JujutsuBundle.message("action.Jujutsu.Popup.Push.text")) {
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
-        runJjOp(project, JujutsuBundle.message("action.Jujutsu.Popup.PushNearest.text"), "jj git push Failed") {
-            JjRepositoryManager.getInstance(project).getAll().forEach { it.gitPush() }
-            notifyJjInfo(project, JujutsuBundle.message("notification.push"))
-        }
+        launchJjPushDialog(project, JjRepositoryManager.getInstance(project).getAll().toList())
     }
 }
 

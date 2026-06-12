@@ -24,10 +24,26 @@ object GitRemoteTagOperations {
      * is a direct user action, so failures must surface instead of being logged away.
      */
     fun deleteRemoteTag(repoRoot: Path, remote: String, name: String, timeoutMs: Long = 30_000) {
-        val operation = "git push $remote --delete refs/tags/$name"
+        runGitPush(repoRoot, listOf(remote, "--delete", "refs/tags/$name"), timeoutMs)
+    }
+
+    /**
+     * Pushes the local tags [names] to [remote]
+     * (`git --git-dir=<dir> push <remote> refs/tags/<t1> refs/tags/<t2> …`).
+     * jj cannot push tags, so this shells out to git after a successful `jj git push`.
+     * Throws [JjOperationException] when git cannot be started, fails, or times out.
+     */
+    fun pushRemoteTags(repoRoot: Path, remote: String, names: List<String>, timeoutMs: Long = 30_000) {
+        if (names.isEmpty()) return
+        runGitPush(repoRoot, listOf(remote) + names.map { "refs/tags/$it" }, timeoutMs)
+    }
+
+    /** Runs `git --git-dir=<dir> push <pushArgs>`, throwing [JjOperationException] on failure. */
+    private fun runGitPush(repoRoot: Path, pushArgs: List<String>, timeoutMs: Long) {
+        val operation = "git push ${pushArgs.joinToString(" ")}"
         val cmdLine = GeneralCommandLine("git")
             .withWorkDirectory(repoRoot.toFile())
-            .withParameters("--git-dir", resolveGitDir(repoRoot).toString(), "push", remote, "--delete", "refs/tags/$name")
+            .withParameters(listOf("--git-dir", resolveGitDir(repoRoot).toString(), "push") + pushArgs)
             .apply { charset = StandardCharsets.UTF_8 }
 
         val handler = try {
