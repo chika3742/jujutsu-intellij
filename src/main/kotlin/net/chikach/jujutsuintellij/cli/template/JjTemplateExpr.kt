@@ -196,7 +196,13 @@ fun CommitExpr.parents(): ListExpr<CommitExpr> = RenderedListExpr(methodCall(thi
 
 fun CommitExpr.root(): BooleanExpr = RenderedBooleanExpr(methodCall(this, "root"))
 
-fun CommitExpr.bookmarks(): ListExpr<SerializableTemplateExpr> = RenderedListExpr<SerializableTemplateExpr>(methodCall(this, "bookmarks"))
+/**
+ * Names of the commit's **local** bookmarks (`self.local_bookmarks()`). `self.bookmarks()` is
+ * intentionally avoided: it also yields remote bookmarks, which — once mapped to `name()` — become
+ * indistinguishable from local ones. Remote bookmarks are surfaced separately via
+ * [untrackedRemoteBookmarkLabels] / [trackedRemoteBookmarkLabels].
+ */
+fun CommitExpr.localBookmarks(): ListExpr<SerializableTemplateExpr> = RenderedListExpr<SerializableTemplateExpr>(methodCall(this, "local_bookmarks"))
     .map(lambda(::commitRefExpr) { it.name() })
 
 /** Names of all local tags pointing to the commit (`self.local_tags()`). */

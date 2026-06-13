@@ -65,18 +65,8 @@
                 class="net.chikach.jujutsuintellij.actions.JjLogBookmarkCreateAction"/>
         <action id="Jujutsu.Log.BookmarkMove"
                 class="net.chikach.jujutsuintellij.actions.JjLogBookmarkMoveAction"/>
-        <action id="Jujutsu.Log.BookmarkRename"
-                class="net.chikach.jujutsuintellij.actions.JjLogBookmarkRenameAction"/>
-        <action id="Jujutsu.Log.BookmarkForget"
-                class="net.chikach.jujutsuintellij.actions.JjLogBookmarkForgetAction"/>
-        <group id="Jujutsu.Log.BookmarkPush"
-               class="net.chikach.jujutsuintellij.actions.JjLogBookmarkPushActionGroup"/>
-        <action id="Jujutsu.Log.BookmarkTrack"
-                class="net.chikach.jujutsuintellij.actions.JjLogBookmarkTrackAction"/>
-        <action id="Jujutsu.Log.BookmarkUntrack"
-                class="net.chikach.jujutsuintellij.actions.JjLogBookmarkUntrackAction"/>
-        <action id="Jujutsu.Log.BookmarkDelete"
-                class="net.chikach.jujutsuintellij.actions.JjLogBookmarkDeleteAction"/>
+        <group id="Jujutsu.Log.BookmarkMenu"
+               class="net.chikach.jujutsuintellij.actions.JjLogBookmarkMenuActionGroup"/>
         <action id="Jujutsu.Log.TagCreate"
                 class="net.chikach.jujutsuintellij.actions.JjLogTagCreateAction"/>
         <group id="Jujutsu.Log.TagDelete"
@@ -154,12 +144,7 @@
             <separator/>
             <reference ref="Jujutsu.Log.BookmarkCreate"/>
             <reference ref="Jujutsu.Log.BookmarkMove"/>
-            <reference ref="Jujutsu.Log.BookmarkRename"/>
-            <reference ref="Jujutsu.Log.BookmarkPush"/>
-            <reference ref="Jujutsu.Log.BookmarkTrack"/>
-            <reference ref="Jujutsu.Log.BookmarkUntrack"/>
-            <reference ref="Jujutsu.Log.BookmarkForget"/>
-            <reference ref="Jujutsu.Log.BookmarkDelete"/>
+            <reference ref="Jujutsu.Log.BookmarkMenu"/>
             <separator/>
             <reference ref="Jujutsu.Log.TagCreate"/>
             <reference ref="Jujutsu.Log.TagDelete"/>

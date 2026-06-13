@@ -167,10 +167,10 @@ class JjCommands {
         execute(request(repo.rootPathNio, listOf("bookmark", "forget", name)))
 
     fun bookmarkTrack(repo: JjRepository, name: String, remote: String): JjCommandResult =
-        execute(request(repo.rootPathNio, listOf("bookmark", "track", "$name@$remote")))
+        execute(request(repo.rootPathNio, listOf("bookmark", "track", name, "--remote=$remote")))
 
     fun bookmarkUntrack(repo: JjRepository, name: String, remote: String): JjCommandResult =
-        execute(request(repo.rootPathNio, listOf("bookmark", "untrack", "$name@$remote")))
+        execute(request(repo.rootPathNio, listOf("bookmark", "untrack", name, "--remote=$remote")))
 
     fun tagList(
         repo: JjRepository,

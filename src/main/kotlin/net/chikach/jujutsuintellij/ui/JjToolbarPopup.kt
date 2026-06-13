@@ -1,10 +1,7 @@
 package net.chikach.jujutsuintellij.ui
 
 import com.intellij.icons.AllIcons
-import com.intellij.openapi.actionSystem.ActionManager
-import com.intellij.openapi.actionSystem.ActionUpdateThread
-import com.intellij.openapi.actionSystem.AnAction
-import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.*
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.Task
@@ -20,7 +17,6 @@ import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.JjRepositoryManager
 import net.chikach.jujutsuintellij.repo.model.JjCommitRef
 import net.chikach.jujutsuintellij.ui.push.launchJjPushDialog
-import com.intellij.openapi.actionSystem.DefaultActionGroup
 
 private const val ALLOW_BACKWARDS_HINT = "--allow-backwards"
 
@@ -111,6 +107,7 @@ private class MoveToWorkingCopyAction(private val repo: JjRepository, private va
             }
 
             override fun onThrowable(error: Throwable) {
+                @Suppress("DialogTitleCapitalization")
                 Messages.showErrorDialog(project, error.message, JujutsuBundle.message("dialog.bookmark.move.error"))
             }
         }.queue()
@@ -177,7 +174,7 @@ private class RenameBookmarkAction(private val repo: JjRepository, private val n
 }
 
 private class RemoveLocallyAction(private val repo: JjRepository, private val name: String) :
-    PopupAction(JujutsuBundle.message("action.Jujutsu.Log.BookmarkForget.text")) {
+    PopupAction(JujutsuBundle.message("action.Jujutsu.Popup.ForgetBookmark.text")) {
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
         runJjOp(project, JujutsuBundle.message("dialog.bookmark.forget.task"), JujutsuBundle.message("dialog.bookmark.forget.error")) {
@@ -188,7 +185,7 @@ private class RemoveLocallyAction(private val repo: JjRepository, private val na
 }
 
 private class DeleteBookmarkAction(private val repo: JjRepository, private val name: String) :
-    PopupAction(JujutsuBundle.message("action.Jujutsu.Log.BookmarkDelete.text")) {
+    PopupAction(JujutsuBundle.message("action.Jujutsu.Popup.DeleteBookmark.text")) {
     override fun actionPerformed(e: AnActionEvent) {
         val project = e.project ?: return
         runJjOp(project, JujutsuBundle.message("dialog.bookmark.delete.task"), JujutsuBundle.message("dialog.bookmark.delete.error")) {

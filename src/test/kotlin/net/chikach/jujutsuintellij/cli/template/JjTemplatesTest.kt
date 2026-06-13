@@ -52,6 +52,20 @@ class JjTemplatesTest {
     }
 
     @Test
+    fun `renders local bookmark names`() {
+        val template = JjTemplates.commitJsonLine {
+            obj {
+                "bookmarks" to serialized(localBookmarks())
+            }
+        }
+
+        assertEquals(
+            "\"{\" ++ \"\\\"bookmarks\\\":\" ++ json(self.local_bookmarks().map(|p| p.name())) ++ \"}\" ++ \"\\n\"",
+            template
+        )
+    }
+
+    @Test
     fun `renders untracked remote bookmark labels`() {
         val template = JjTemplates.commitJsonLine {
             obj {

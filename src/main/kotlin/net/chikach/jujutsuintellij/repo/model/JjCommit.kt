@@ -34,7 +34,7 @@ data class JjCommit(
                     "authorEmail" to string(author().email())
                     "authorTime" to string(author().timestamp().iso8601())
                     "description" to string(description())
-                    "bookmarks" to serialized(bookmarks())
+                    "bookmarks" to serialized(localBookmarks())
                     "tags" to serialized(localTags())
                     "isRoot" to bool(root())
                     "conflictedFiles" to serialized(conflictedFilePaths())
