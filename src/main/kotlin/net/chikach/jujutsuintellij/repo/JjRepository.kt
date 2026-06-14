@@ -141,6 +141,13 @@ class JjRepository(
     /** Repo-relative paths of files that are in a conflicted state at `@`. */
     fun workingCopyConflictedFiles(): List<String> = workingCopyCommit()?.conflictedFiles.orEmpty()
 
+    /**
+     * One-shot snapshot of `@`: parents, conflicted files, and (for single-parent `@`) the diff
+     * against the parent. Lets callers replace a pair of `jj log -r @` + `jj diff` calls with a
+     * single `jj log -r @` invocation; returns `null` when the snapshot cannot be read.
+     */
+    fun workingCopySnapshot(): JjWorkingCopySnapshot? = commands().workingCopySnapshot(this)
+
     // ─── Bookmarks ──────────────────────────────────────────────────────────
 
     /**

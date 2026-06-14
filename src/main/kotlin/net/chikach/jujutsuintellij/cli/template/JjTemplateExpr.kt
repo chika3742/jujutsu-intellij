@@ -22,6 +22,8 @@ sealed interface CommitRefExpr : SerializableExpr
 
 sealed interface TreeEntryExpr : SerializableExpr
 
+sealed interface TreeDiffEntryExpr : JjTemplateExpr
+
 sealed interface SignatureExpr : SerializableExpr
 
 sealed interface AnnotationLineExpr : JjTemplateExpr
@@ -97,6 +99,7 @@ private class RenderedTimestampExpr(source: String) : RenderedExpr(source), Time
 private class RenderedCommitExpr(source: String) : RenderedExpr(source), CommitExpr
 private class RenderedCommitRefExpr(source: String) : RenderedExpr(source), CommitRefExpr
 private class RenderedTreeEntryExpr(source: String) : RenderedExpr(source), TreeEntryExpr
+private class RenderedTreeDiffEntryExpr(source: String) : RenderedExpr(source), TreeDiffEntryExpr
 private class RenderedSignatureExpr(source: String) : RenderedExpr(source), SignatureExpr
 private class RenderedAnnotationLineExpr(source: String) : RenderedExpr(source), AnnotationLineExpr
 private class RenderedListExpr<T : JjTemplateExpr>(source: String) : RenderedExpr(source), ListExpr<T>
@@ -143,6 +146,8 @@ fun commitExpr(source: String): CommitExpr = RenderedCommitExpr(source)
 fun commitRefExpr(source: String): CommitRefExpr = RenderedCommitRefExpr(source)
 
 fun treeEntryExpr(source: String): TreeEntryExpr = RenderedTreeEntryExpr(source)
+
+fun treeDiffEntryExpr(source: String): TreeDiffEntryExpr = RenderedTreeDiffEntryExpr(source)
 
 fun annotationLineExpr(source: String): AnnotationLineExpr = RenderedAnnotationLineExpr(source)
 
@@ -211,6 +216,19 @@ fun CommitExpr.localTags(): ListExpr<SerializableTemplateExpr> = RenderedListExp
 
 fun TreeEntryExpr.path(): SerializableTemplateExpr =
     serializableTemplateExpr(methodCall(this, "path"))
+
+/** `self.diff().files()` — the list of changed-file entries for this commit's diff against its parents. */
+fun CommitExpr.diffFiles(): ListExpr<TreeDiffEntryExpr> =
+    RenderedListExpr("${methodCall(this, "diff")}.files()")
+
+fun TreeDiffEntryExpr.statusChar(): StringExpr =
+    RenderedStringExpr(methodCall(this, "status_char"))
+
+fun TreeDiffEntryExpr.path(): SerializableTemplateExpr =
+    serializableTemplateExpr(methodCall(this, "path"))
+
+fun TreeDiffEntryExpr.source(): TreeEntryExpr =
+    treeEntryExpr(methodCall(this, "source"))
 
 /**
  * `self.conflicted_files().map(|p| stringify(p.path()))` — yields a list of path strings.

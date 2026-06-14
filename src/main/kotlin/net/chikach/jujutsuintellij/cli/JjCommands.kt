@@ -3,10 +3,7 @@ package net.chikach.jujutsuintellij.cli
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.service
 import net.chikach.jujutsuintellij.repo.JjRepository
-import net.chikach.jujutsuintellij.repo.model.JjAnnotationLine
-import net.chikach.jujutsuintellij.repo.model.JjCommit
-import net.chikach.jujutsuintellij.repo.model.JjCommitRef
-import net.chikach.jujutsuintellij.repo.model.JjHistoryEntry
+import net.chikach.jujutsuintellij.repo.model.*
 import org.jetbrains.annotations.ApiStatus
 import java.nio.file.Path
 
@@ -118,6 +115,17 @@ class JjCommands {
         JjJsonCommand.getInstance().executeJsonList(
             request(repo.rootPathNio, listOf("log", "--no-graph", "-r", revset, "-T", JjCommit.TEMPLATE))
         )
+
+    /**
+     * One-shot snapshot of `@` (working-copy commit) — identity, parents, conflicted files, and the
+     * diff against its parent(s). Returns `null` when `@` cannot be read. The diff is only meaningful
+     * for single-parent `@`; merge commits require a separate `diffSummary` call (see
+     * [JjWorkingCopySnapshot.firstParentChanges]).
+     */
+    fun workingCopySnapshot(repo: JjRepository): JjWorkingCopySnapshot? =
+        JjJsonCommand.getInstance().executeJsonList<JjWorkingCopySnapshot>(
+            request(repo.rootPathNio, listOf("log", "--no-graph", "-r", "@", "-T", JjWorkingCopySnapshot.TEMPLATE))
+        ).firstOrNull()
 
     fun bookmarkList(
         repo: JjRepository,

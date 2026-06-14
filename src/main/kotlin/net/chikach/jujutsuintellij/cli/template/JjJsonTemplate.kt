@@ -78,6 +78,29 @@ private data class JsonRawValue(private val expr: TemplateExpr) : JjJsonValue {
     override fun render(ctx: RenderContext): String = expr.render(ctx)
 }
 
+/**
+ * Renders a JSON array whose elements are JSON objects built from each list element. Each element
+ * is bound to a lambda parameter (default name `e`) and passed to [builder] to compose the per-element
+ * object. The resulting jj template is `"[" ++ list.map(|e| <object>).join(",") ++ "]"`, which yields
+ * a syntactically valid JSON array fragment that callers embed via [rawJson].
+ */
+fun <T : JjTemplateExpr> ListExpr<T>.jsonObjectArray(
+    elementFactory: (String) -> T,
+    builder: JsonObjectBuilder.(T) -> Unit,
+): JjJsonValue {
+    val varName = "e"
+    val element = elementFactory(varName)
+    val objBuilder = JsonObjectBuilder()
+    objBuilder.builder(element)
+    val objSrc = objBuilder.build().render()
+    val parts = listOf(
+        RenderContext.quoteString("["),
+        "${this.render()}.map(|$varName| $objSrc).join(${RenderContext.quoteString(",")})",
+        RenderContext.quoteString("]"),
+    )
+    return rawJson(templateExpr(parts.joinToString(" ++ ")))
+}
+
 object JjTemplates {
     fun commitJsonLine(builder: CommitExpr.() -> JjJsonValue): String =
         renderJsonLine(commitExpr("self").builder())

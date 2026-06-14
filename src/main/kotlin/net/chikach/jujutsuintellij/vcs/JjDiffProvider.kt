@@ -59,12 +59,8 @@ class JjDiffProvider(private val project: Project) : DiffProvider {
 
     private fun fallbackLastRevision(filePath: FilePath): ItemLatestState? {
         val manager = JjRepositoryManager.getInstance(project)
-        for (repo in manager.getAll()) {
-            if (repo.containsPath(filePath.path)) {
-                return ItemLatestState(parentRevision, true, true)
-            }
-        }
-        return null
+        manager.getRepositoryContaining(filePath.path) ?: return null
+        return ItemLatestState(parentRevision, true, true)
     }
 
     private fun repoFor(file: VirtualFile): JjRepository? =

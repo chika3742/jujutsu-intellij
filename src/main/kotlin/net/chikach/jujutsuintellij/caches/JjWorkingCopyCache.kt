@@ -52,10 +52,17 @@ class JjWorkingCopyCache(private val project: Project) : Disposable {
         return Runnable { changeListeners.remove(listener) }
     }
 
-    /** Debounce-schedules a background refresh (200 ms). Safe to call from any thread. */
+    /**
+     * Debounce-schedules a background refresh (200 ms). Safe to call from any thread.
+     *
+     * Idempotent while a refresh is already scheduled: high-frequency callers (e.g. the BGT
+     * `JjRevisionWidget.update` re-renders) would otherwise reset the trailing-edge timer
+     * indefinitely and starve [doRefresh].
+     */
     @Synchronized
     fun refresh() {
-        pendingRefresh?.cancel(false)
+        val current = pendingRefresh
+        if (current != null && !current.isDone) return
         pendingRefresh = AppExecutorUtil.getAppScheduledExecutorService()
             .schedule(::doRefresh, 200, TimeUnit.MILLISECONDS)
     }

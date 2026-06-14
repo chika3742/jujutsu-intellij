@@ -149,7 +149,7 @@ class JjLogProvider(private val project: Project) : VcsLogProvider {
             description.isBlank() -> JujutsuBundle.message("changeDesc.noDescriptionSet")
             else -> null
         }
-        var subject = placeholder ?: (description.lines().firstOrNull()?.trim() ?: "")
+        var subject = placeholder ?: (description.lineSequence().firstOrNull()?.trim() ?: "")
         if (isConflicted) {
             subject += " ${JujutsuBundle.message("changeDesc.conflicted")}"
         }

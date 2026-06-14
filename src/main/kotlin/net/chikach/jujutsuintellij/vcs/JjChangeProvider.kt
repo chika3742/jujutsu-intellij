@@ -56,19 +56,32 @@ class JjChangeProvider(private val project: Project) : ChangeProvider {
         progress: ProgressIndicator,
         processedPaths: MutableSet<FilePath>,
     ) {
-        val changes = try {
+        // Take a single snapshot of `@` (one `jj log -r @`) covering diff, conflicts, and parent
+        // count. For single-parent `@` the snapshot's diff equals `jj diff --from first_parent(@)`,
+        // so we avoid a second CLI invocation. We fall back to `repo.workingCopyChanges()` in two
+        // cases: (1) merge `@`, where the template diff is against the parents' common ancestor
+        // (different from first-parent diff); (2) snapshot CLI failure.
+        val snapshot = try {
+            repo.workingCopySnapshot()
+        } catch (e: Exception) {
+            LOG.warn("jj working-copy snapshot failed in ${repo.rootPath}", e)
+            null
+        }
+
+        val changes = snapshot?.firstParentChanges() ?: try {
             repo.workingCopyChanges()
         } catch (e: Exception) {
             LOG.warn("jj diff failed in ${repo.rootPath}", e)
             return
         }
 
-        val conflicted = try {
-            repo.workingCopyConflictedFiles().mapTo(HashSet()) { repo.normalizeRelativePath(it) }
+        val conflictedRaw = snapshot?.conflictedFiles ?: try {
+            repo.workingCopyConflictedFiles()
         } catch (e: Exception) {
             LOG.warn("jj conflict listing failed in ${repo.rootPath}", e)
-            emptySet()
+            emptyList()
         }
+        val conflicted = conflictedRaw.mapTo(HashSet()) { repo.normalizeRelativePath(it) }
 
         for (change in changes) {
             progress.checkCanceled()
