@@ -1,5 +1,6 @@
 package net.chikach.jujutsuintellij.ui.push
 
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.project.Project
@@ -8,21 +9,20 @@ import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.vcs.FileStatus
 import com.intellij.openapi.vcs.changes.Change
 import com.intellij.openapi.vcs.changes.ui.SimpleAsyncChangesBrowser
-import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.ColoredTreeCellRenderer
+import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.ui.JBUI
-import com.intellij.icons.AllIcons
 import com.intellij.vcs.log.VcsCommitMetadata
 import com.intellij.vcs.log.impl.HashImpl
 import com.intellij.vcs.log.impl.VcsCommitMetadataImpl
+import com.intellij.vcs.log.impl.VcsUserImpl
 import com.intellij.vcs.log.ui.details.commit.CommitDetailsPanel
 import com.intellij.vcs.log.ui.frame.CommitPresentationUtil
-import com.intellij.vcs.log.impl.VcsUserImpl
 import net.chikach.jujutsuintellij.JujutsuBundle
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.model.JjCommit
@@ -56,7 +56,6 @@ data class RepoPushInput(
 data class RepoPushSelection(
     val repo: JjRepository,
     val remote: String,
-    val allowNew: Boolean,
     val bookmarkNames: List<String>,
     val changes: List<BookmarkPushChange>,
 )
@@ -65,7 +64,7 @@ data class RepoPushSelection(
  * Read-only preview of a `jj git push`, with a per-repository remote selector and optional tag push.
  *
  * The bookmark changes are computed (off the EDT) from the cached refs in each [RepoPushInput] via
- * [computeChanges]; results are cached by (repo, remote, allowNew) so switching back to a previously
+ * [computeChanges]; results are cached by (repo, remote) so switching back to a previously
  * shown remote is instant. The tree shows one node per affected bookmark with its pushed commits
  * beneath; selecting a commit shows its details in the right pane.
  */
@@ -103,7 +102,6 @@ class JjPushDialog(
     /** Guards against a slow commit-changes load overwriting the pane after the selection moved on. */
     private var selectionSeq = 0
 
-    private val allowNewCheckBox = JBCheckBox(JujutsuBundle.message("dialog.push.allowNew"))
     private val pushTagsCheckBox = JBCheckBox(JujutsuBundle.message("dialog.push.pushTags"))
     private val tagScopeCombo = ComboBox(
         arrayOf(
@@ -120,7 +118,6 @@ class JjPushDialog(
 
     init {
         title = JujutsuBundle.message("dialog.push.title")
-        allowNewCheckBox.addActionListener { rebuildTree() }
         pushTagsCheckBox.addActionListener { tagScopeCombo.isEnabled = pushTagsCheckBox.isSelected }
         tagScopeCombo.isEnabled = false
         tree.addTreeSelectionListener { onTreeSelection() }
@@ -186,7 +183,6 @@ class JjPushDialog(
     private fun buildOptionsPanel(): JComponent =
         JPanel(java.awt.FlowLayout(java.awt.FlowLayout.LEFT, JBUI.scale(12), JBUI.scale(4))).apply {
             border = JBUI.Borders.emptyTop(8)
-            add(allowNewCheckBox)
             add(pushTagsCheckBox)
             add(tagScopeCombo)
         }
@@ -194,7 +190,7 @@ class JjPushDialog(
     // ─── Tree building / async loading ────────────────────────────────────────
 
     private fun cacheKey(repo: JjRepository, remote: String): String =
-        "${repo.rootPath}|$remote|${allowNewCheckBox.isSelected}"
+        "${repo.rootPath}|$remote"
 
     private fun rebuildTree() {
         rootNode.removeAllChildren()
@@ -257,9 +253,8 @@ class JjPushDialog(
         val input = inputs.first { it.repo.rootPath == repo.rootPath }
         val refs = input.refs
         val filter = input.bookmarkFilter
-        val allowNew = allowNewCheckBox.isSelected
         ApplicationManager.getApplication().executeOnPooledThread {
-            val computed = runCatching { computeChanges(repo, refs, remote, allowNew) }.getOrDefault(emptyList())
+            val computed = runCatching { computeChanges(repo, refs, remote) }.getOrDefault(emptyList())
                 .let { changes -> if (filter == null) changes else changes.filter { it.name in filter } }
             // ModalityState.any(): this dialog is modal, so a plain invokeLater would defer the update
             // until the dialog closes, leaving the tree stuck on "Loading…".
@@ -337,7 +332,7 @@ class JjPushDialog(
         get() = inputs.mapNotNull { input ->
             val remote = selectedRemotes[input.repo.rootPath] ?: return@mapNotNull null
             val changes = changesCache[cacheKey(input.repo, remote)].orEmpty()
-            RepoPushSelection(input.repo, remote, allowNewCheckBox.isSelected, pushedBookmarkNames(changes), changes)
+            RepoPushSelection(input.repo, remote, pushedBookmarkNames(changes), changes)
         }
 
     val pushTags: Boolean get() = pushTagsCheckBox.isSelected

@@ -263,8 +263,8 @@ class JjRepository(
         commands().gitFetch(this, remote).orThrow("git fetch")
     }
 
-    fun gitPush(bookmarks: List<String> = emptyList(), remote: String? = null, allowNew: Boolean = false) {
-        commands().gitPush(this, bookmarks, remote, allowNew).orThrow("git push")
+    fun gitPush(bookmarks: List<String> = emptyList(), remote: String? = null) {
+        commands().gitPush(this, bookmarks, remote).orThrow("git push")
     }
 
     /**

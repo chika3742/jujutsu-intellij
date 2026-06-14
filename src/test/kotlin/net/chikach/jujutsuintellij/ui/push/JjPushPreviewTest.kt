@@ -17,7 +17,7 @@ class JjPushPreviewTest {
     @Test
     fun `up-to-date bookmark is skipped`() {
         val refs = listOf(local("main", "abc"), remote("main", "origin", "abc", tracked = true))
-        assertEquals(emptyList(), planPushTargets(refs, "origin", allowNew = false))
+        assertEquals(emptyList(), planPushTargets(refs, "origin"))
     }
 
     @Test
@@ -25,17 +25,16 @@ class JjPushPreviewTest {
         val refs = listOf(local("main", "def"), remote("main", "origin", "abc", tracked = true))
         assertEquals(
             listOf(PushTarget("main", localId = "def", remoteId = "abc")),
-            planPushTargets(refs, "origin", allowNew = false),
+            planPushTargets(refs, "origin"),
         )
     }
 
     @Test
-    fun `new bookmark is included only when allowNew is set`() {
+    fun `new bookmark is included as an add target`() {
         val refs = listOf(local("feature", "x"))
-        assertEquals(emptyList(), planPushTargets(refs, "origin", allowNew = false))
         assertEquals(
             listOf(PushTarget("feature", localId = "x", remoteId = null)),
-            planPushTargets(refs, "origin", allowNew = true),
+            planPushTargets(refs, "origin"),
         )
     }
 
@@ -44,7 +43,7 @@ class JjPushPreviewTest {
         val refs = listOf(local("feature", "x"), remote("feature", "origin", "y", tracked = false))
         assertEquals(
             listOf(PushTarget("feature", localId = "x", remoteId = null)),
-            planPushTargets(refs, "origin", allowNew = true),
+            planPushTargets(refs, "origin"),
         )
     }
 
@@ -53,24 +52,23 @@ class JjPushPreviewTest {
         val refs = listOf(remote("old", "origin", "abc", tracked = true))
         assertEquals(
             listOf(PushTarget("old", localId = null, remoteId = "abc")),
-            planPushTargets(refs, "origin", allowNew = false),
+            planPushTargets(refs, "origin"),
         )
     }
 
     @Test
     fun `conflicted local bookmark is skipped`() {
         val refs = listOf(local("main", null), remote("main", "origin", "abc", tracked = true))
-        assertEquals(emptyList(), planPushTargets(refs, "origin", allowNew = false))
+        assertEquals(emptyList(), planPushTargets(refs, "origin"))
     }
 
     @Test
     fun `tracked ref on a different remote is ignored for the selected remote`() {
         val refs = listOf(local("main", "def"), remote("main", "upstream", "def", tracked = true))
         // No tracked counterpart on origin, so it is a new bookmark on origin.
-        assertEquals(emptyList(), planPushTargets(refs, "origin", allowNew = false))
         assertEquals(
             listOf(PushTarget("main", localId = "def", remoteId = null)),
-            planPushTargets(refs, "origin", allowNew = true),
+            planPushTargets(refs, "origin"),
         )
     }
 

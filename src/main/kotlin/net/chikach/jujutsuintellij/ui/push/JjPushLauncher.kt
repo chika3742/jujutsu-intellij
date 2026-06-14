@@ -65,7 +65,6 @@ private fun performPush(
                 selection.repo.gitPush(
                     bookmarks = selection.bookmarkNames,
                     remote = selection.remote,
-                    allowNew = selection.allowNew,
                 )
             }
             if (pushTags) {

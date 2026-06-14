@@ -43,7 +43,7 @@ internal data class PushTarget(val name: String, val localId: String?, val remot
  * Pure selection of the bookmarks that pushing to [remote] would affect, from the cached [refs].
  *
  * - A local bookmark whose tracked-remote target on [remote] differs from its local target → update.
- * - A local bookmark with no tracked counterpart on [remote] → add, included only when [allowNew].
+ * - A local bookmark with no tracked counterpart on [remote] → add (jj tracks it automatically).
  * - A tracked remote ref on [remote] with no local bookmark → delete (always propagated).
  *
  * Conflicted local bookmarks (no `commitId`) and up-to-date bookmarks are skipped.
@@ -51,7 +51,6 @@ internal data class PushTarget(val name: String, val localId: String?, val remot
 internal fun planPushTargets(
     refs: List<JjCommitRef>,
     remote: String,
-    allowNew: Boolean,
 ): List<PushTarget> {
     val targets = mutableListOf<PushTarget>()
     for ((name, group) in refs.groupBy { it.name }) {
@@ -66,7 +65,6 @@ internal fun planPushTargets(
         val localId = local.commitId ?: continue // conflicted bookmark: cannot be pushed
         val remoteId = trackedRemote?.commitId
         if (remoteId == localId) continue // already up to date
-        if (remoteId == null && !allowNew) continue // new bookmark, not allowed
         targets += PushTarget(name, localId, remoteId)
     }
     return targets.sortedBy { it.name }
@@ -88,9 +86,8 @@ fun computeChanges(
     repo: JjRepository,
     refs: List<JjCommitRef>,
     remote: String,
-    allowNew: Boolean,
 ): List<BookmarkPushChange> =
-    planPushTargets(refs, remote, allowNew).map { target -> resolveChange(repo, remote, target) }
+    planPushTargets(refs, remote).map { target -> resolveChange(repo, remote, target) }
 
 private fun resolveChange(repo: JjRepository, remote: String, target: PushTarget): BookmarkPushChange {
     val (name, localId, remoteId) = target
