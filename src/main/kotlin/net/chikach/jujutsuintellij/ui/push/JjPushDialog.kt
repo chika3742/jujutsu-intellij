@@ -17,12 +17,6 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.ui.JBUI
-import com.intellij.vcs.log.VcsCommitMetadata
-import com.intellij.vcs.log.impl.HashImpl
-import com.intellij.vcs.log.impl.VcsCommitMetadataImpl
-import com.intellij.vcs.log.impl.VcsUserImpl
-import com.intellij.vcs.log.ui.details.commit.CommitDetailsPanel
-import com.intellij.vcs.log.ui.frame.CommitPresentationUtil
 import net.chikach.jujutsuintellij.JujutsuBundle
 import net.chikach.jujutsuintellij.repo.JjRepository
 import net.chikach.jujutsuintellij.repo.model.JjCommit
@@ -93,8 +87,8 @@ class JjPushDialog(
         cellRenderer = PushTreeCellRenderer()
     }
 
-    /** Right pane bottom: the VCS-Log-style details panel for the selected commit. */
-    private val detailsPanel = CommitDetailsPanel()
+    /** Right pane bottom: the details panel for the selected commit. */
+    private val detailsPanel = JjPushCommitDetailsPanel()
 
     /** Right pane top: the changed files of the selected commit (double-click shows the file diff). */
     private val changesBrowser = SimpleAsyncChangesBrowser(project, false, false)
@@ -279,8 +273,7 @@ class JjPushDialog(
         val node = tree.lastSelectedPathComponent as? DefaultMutableTreeNode
         val data = node?.userObject as? CommitNodeData ?: return // keep the last commit shown
         val seq = ++selectionSeq
-        val presentation = CommitPresentationUtil.buildPresentation(project, commitMetadata(data), HashSet())
-        detailsPanel.setCommit(presentation)
+        detailsPanel.setCommit(data.commit)
         changesBrowser.setChangesToDisplay(emptyList())
         ApplicationManager.getApplication().executeOnPooledThread {
             val changes = runCatching { commitChanges(data.repo, data.commit) }.getOrDefault(emptyList())
@@ -288,26 +281,6 @@ class JjPushDialog(
                 if (!disposed && seq == selectionSeq) changesBrowser.setChangesToDisplay(changes)
             }, ModalityState.any())
         }
-    }
-
-    /** Builds VCS-Log commit metadata for [data]'s commit, feeding the details panel. */
-    private fun commitMetadata(data: CommitNodeData): VcsCommitMetadata {
-        val commit = data.commit
-        @Suppress("DEPRECATION")
-        val author = VcsUserImpl(commit.authorName, commit.authorEmail)
-        val subject = commit.description.lineSequence().firstOrNull().orEmpty()
-        val time = commit.authorTime.time
-        return VcsCommitMetadataImpl(
-            HashImpl.build(commit.commitId),
-            commit.parentIds.map { HashImpl.build(it) },
-            time,
-            data.repo.root,
-            subject,
-            author,
-            commit.description,
-            author,
-            time,
-        )
     }
 
     /** Builds the [Change] list for [commit]'s diff against its first parent (`jj diff --summary`). */
