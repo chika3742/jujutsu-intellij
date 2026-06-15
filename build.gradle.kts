@@ -1,9 +1,11 @@
+import org.jetbrains.changelog.Changelog
 
 plugins {
     id("java")
     id("org.jetbrains.kotlin.jvm") version "2.1.20"
     kotlin("plugin.serialization") version "2.1.20"
     id("org.jetbrains.intellij.platform") version "2.14.0"
+    id("org.jetbrains.changelog") version "2.2.1"
 }
 
 group = "net.chikach"
@@ -32,18 +34,16 @@ intellijPlatform {
     pluginConfiguration {
         name = "Jujutsu"
 
-        description = """
-            First-class <a href="https://jj-vcs.github.io/jj/">Jujutsu</a> (jj) VCS integration for IntelliJ IDEA.
-            <br/>
-            <em>Early scaffolding — CLI wrapper, version detection, and settings panel.</em>
-        """.trimIndent()
-
-        changeNotes = """
-            <h3>0.1.0</h3>
-            <ul>
-                <li>Initial scaffolding: jj CLI wrapper, version probe, settings panel under <b>Tools | Jujutsu</b>.</li>
-            </ul>
-        """.trimIndent()
+        changeNotes = provider {
+            with(changelog) {
+                renderItem(
+                    (getOrNull(project.version.toString()) ?: getUnreleased())
+                        .withHeader(false)
+                        .withEmptySections(false),
+                    Changelog.OutputType.HTML,
+                )
+            }
+        }
 
         vendor {
             name = "chikach"
@@ -55,6 +55,11 @@ intellijPlatform {
             sinceBuild = "252.25557"
         }
     }
+}
+
+changelog {
+    repositoryUrl = "https://github.com/chika3742/jujutsu-intellij"
+    groups = listOf("Added", "Changed", "Fixed", "Removed")
 }
 
 tasks {

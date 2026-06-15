@@ -3,6 +3,29 @@
     <id>net.chikach.jujutsu-intellij</id>
     <vendor email="kazu.chika.shima@gmail.com">chikach</vendor>
 
+    <description><![CDATA[
+        First-class <a href="https://jj-vcs.github.io/jj/">Jujutsu</a> (jj) VCS integration for IntelliJ IDEA and other
+        JetBrains IDEs.
+        <br/><br/>
+        <b>Highlights</b>
+        <ul>
+          <li><b>Working copy</b> via <code>jj commit</code>, with Local Changes populated from <code>jj status</code> —
+            no staging step.</li>
+          <li><b>New change</b>, <b>Describe</b>, <b>Abandon</b>, <b>Edit</b>, <b>Squash</b>, and <b>Rebase</b>
+            (<code>-r</code> / <code>-s</code>) from the VCS menu and Log context menu.</li>
+          <li><b>VCS Log</b> tab with jj-native history; working-copy and conflicted commits are colored to stand out.</li>
+          <li><b>File History</b>, <b>Annotate</b>, and <b>Diff</b> driven by jj revisions instead of the backing Git
+            store.</li>
+          <li><b>Bookmarks</b>: create / delete / move / rename / forget, plus track / untrack of
+            <code>&lt;bookmark&gt;@&lt;remote&gt;</code> refs and <code>jj git fetch</code> / <code>jj git push</code>.</li>
+          <li><b>Toolbar widget</b> showing the working-copy description with a quick bookmark popup.</li>
+          <li><b>Conflict resolution</b> opens the IDE merge tool for files jj reports as conflicted.</li>
+        </ul>
+        <br/>
+        Requires the <code>jj</code> CLI on <code>PATH</code> (or configured under
+        <b>Settings | Tools | Jujutsu</b>).
+    ]]></description>
+
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.vcs</depends>
 
