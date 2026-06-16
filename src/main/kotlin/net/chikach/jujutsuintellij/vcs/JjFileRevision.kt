@@ -38,7 +38,7 @@ class JjFileRevision(
 
     override fun getChangedRepositoryPath(): RepositoryLocation? = null
 
-    @Deprecated("Use loadContent() instead", ReplaceWith("loadContent()"))
+    @Suppress("OVERRIDE_DEPRECATION")
     override fun getContent(): ByteArray? = loadContent()
 
     override fun loadContent(): ByteArray? {
